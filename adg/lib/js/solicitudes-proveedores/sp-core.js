@@ -8,6 +8,7 @@
 
   const SP = window.SP = window.SP || {};
 
+  // Las vistas inyectan window.SP_CONFIG con rutas absolutas (ver sp_layout.php); estos son respaldos
   SP.config = $.extend({
     controlador: '../../controllers/solicitudes-proveedores/SolicitudesProveedoresController.php',
     servicioSubida: '../../models/ServiceUploadFile.php'

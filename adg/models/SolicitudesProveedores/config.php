@@ -13,6 +13,10 @@ return array(
         'proveedor'     => 9,
     ),
 
+    // URL web de la carpeta de la aplicacion, por ejemplo '/calidad/'.
+    // Vacio = se detecta sola. Definala si el servidor usa alias o enlaces simbolicos y las rutas fallan.
+    'url_app' => '',
+
     // Charset con el que la BD entrega/recibe texto via mssql_* (FreeTDS).
     // Si su freetds.conf tiene "client charset = UTF-8", cambie a 'UTF-8'.
     'db_charset' => 'ISO-8859-1',

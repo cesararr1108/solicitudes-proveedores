@@ -15,15 +15,22 @@ Compatible con **PHP 5.4** y `mssql_*` (SQL Server 2008+). Sin Composer ni depen
    - `db_charset`: use `ISO-8859-1` si FreeTDS entrega Latin-1 (lo normal con `Modern_Spanish_CI_AS`). Use `UTF-8` si `freetds.conf` tiene `client charset = UTF-8`.
    - `adjuntos.ruta_ftp`: carpeta remota donde `ServiceUploadFile.php` deja los archivos. **La carpeta debe existir en el FTP.**
    - `roles`: IDs de `T_ROLES` (1 administrador, 118 gerente, 6 auxiliar, 9 proveedor).
-3. Agregue las opciones al menú del ADG:
+3. Registre el módulo en el menú (`T_MODULOS`) con **`ARCHIVO = 'solicitudes-proveedores/index'`**. El script `adg/sql/solicitudes_proveedores_menu.sql` trae el `INSERT` de ejemplo. Dé acceso a los roles 1, 6, 9 y 118.
 
-| Vista | Archivo | Roles |
-|---|---|---|
-| Mis solicitudes (proveedor) | `views/solicitudes-proveedores/sp_proveedor.php` | 9 |
-| Bandeja / Historial / Dashboard | `views/solicitudes-proveedores/sp_mercadeo.php` | 1, 118, 6 |
-| Tipos de solicitud | `views/solicitudes-proveedores/sp_tipos_solicitud.php` | 1 |
+   El `index.php` muestra la vista según el rol de la sesión:
 
-El menú puede apuntar a la carpeta `views/solicitudes-proveedores/`: su `index.php` redirige según el rol (9 → proveedor; 1, 118, 6 → mercadeo). El administrador entra a *Tipos de solicitud* desde un botón en la vista de mercadeo.
+| Rol | Vista |
+|---|---|
+| 9 proveedor | Mis solicitudes (`sp_proveedor.php`) |
+| 1, 118, 6 | Bandeja / Historial / Dashboard (`sp_mercadeo.php`) |
+| 1 + `?vista=tipos` | Tipos de solicitud (`sp_tipos_solicitud.php`); el administrador tiene un botón en mercadeo |
+
+   Funciona igual si su menú **navega** a la URL, la **incluye** (`include`) dentro de su plantilla, o la **carga por AJAX** en un contenedor:
+   - Si la vista se pide directamente, devuelve la página completa.
+   - Si se incluye o se carga por AJAX, devuelve solo el bloque del módulo.
+   - Las rutas de CSS, JS, controlador y `ServiceUploadFile.php` son absolutas (por ejemplo `/calidad/...`) y se calculan solas.
+   - Si su servidor usa alias y no se calculan bien, defina `url_app` en `config.php`.
+   - jQuery, SheetJS y `servicios.js` solo se cargan si la página aún no los tiene.
 
 Puede abrir una solicitud directamente con `?id=123` (útil para enlaces en correos).
 
@@ -56,14 +63,15 @@ adg/
 │       ├── Http/                 ← ControladorHttp (acción → caso de uso), sesión → Actor
 │       ├── Notificacion/         ← NotificadorNulo (reemplazable por correo)
 │       └── Contenedor.php        ← composición de dependencias
-├── views/solicitudes-proveedores/       ← sp_layout, sp_proveedor, sp_mercadeo, sp_tipos_solicitud
+├── views/solicitudes-proveedores/       ← index (entrada por rol), sp_layout, sp_proveedor, sp_mercadeo, sp_tipos_solicitud
 ├── lib/js/solicitudes-proveedores/
 │   ├── sp-core.js      ← API (usa enviarPeticion), drawer, toasts, cargador de archivos (Ctrl+V)
 │   ├── sp-excel.js     ← lectura/plantillas/exportación con SheetJS
 │   ├── sp-detalle.js   ← detalle compartido (proveedor y mercadeo)
 │   ├── sp-proveedor.js / sp-mercadeo.js / sp-tipos.js
 ├── lib/css/solicitudes-proveedores/solicitudes_proveedores.css   ← prefijo .sp-, tema por organización
-├── sql/solicitudes_proveedores.sql
+├── sql/solicitudes_proveedores.sql        ← tablas
+├── sql/solicitudes_proveedores_menu.sql   ← registro en T_MODULOS
 └── tests/SolicitudesProveedores/DominioTest.php
 ```
 
@@ -145,7 +153,7 @@ El formulario del proveedor, la plantilla descargable y la prevalidación salen 
 - Protección CSRF básica: el endpoint exige `X-Requested-With: XMLHttpRequest` (jQuery lo envía).
 - Se validan la URL y la ruta de cada adjunto contra `ruta_ftp`: no se puede registrar un enlace externo.
 
-- Rutas relativas: las vistas están en `views/solicitudes-proveedores/`, por eso `SP.config` (sp-core.js) apunta a `../../controllers/...` y `../../models/ServiceUploadFile.php`. Como `subirArchivos()` de `servicios.js` tiene la ruta fija `../models/ServiceUploadFile.php`, `sp-core.js` la corrige con un `$.ajaxPrefilter` solo para esa URL, sin modificar `servicios.js`. Si mueve las vistas, ajuste `SP.config` (o defina `window.SP_CONFIG` antes de cargar sp-core.js).
+- Rutas: `sp_layout.php` inyecta `window.SP_CONFIG` con las URLs absolutas del controlador, de `ServiceUploadFile.php` y de las vistas. Como `subirArchivos()` de `servicios.js` tiene la ruta fija `../models/ServiceUploadFile.php`, `sp-core.js` la corrige con un `$.ajaxPrefilter` solo para esa URL, sin modificar `servicios.js`.
 
 ### Observaciones sobre código existente (no modificado)
 
