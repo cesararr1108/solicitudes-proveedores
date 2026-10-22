@@ -11,8 +11,8 @@ if (session_id() === '') {
 $sesion = $_SESSION;
 session_write_close();
 
-require_once dirname(__FILE__) . '/../models/funciones.php';
-require_once dirname(__FILE__) . '/../models/SolicitudesProveedores/bootstrap.php';
+require_once dirname(__FILE__) . '/../../models/funciones.php';
+require_once dirname(__FILE__) . '/../../models/SolicitudesProveedores/bootstrap.php';
 
 use SolicitudesProveedores\Infraestructura\Contenedor;
 use SolicitudesProveedores\Infraestructura\Http\ControladorHttp;

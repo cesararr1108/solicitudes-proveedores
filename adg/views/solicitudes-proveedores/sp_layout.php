@@ -9,8 +9,8 @@ if (session_id() === '') {
 
 function sp_asset($ruta)
 {
-    $archivo = dirname(__FILE__) . '/../' . $ruta;
-    return '../' . $ruta . (is_file($archivo) ? '?v=' . filemtime($archivo) : '');
+    $archivo = dirname(__FILE__) . '/../../' . $ruta;
+    return '../../' . $ruta . (is_file($archivo) ? '?v=' . filemtime($archivo) : '');
 }
 
 function sp_render_vista($titulo, array $rolesPermitidos, array $scripts, $usaExcel)
@@ -26,7 +26,7 @@ function sp_render_vista($titulo, array $rolesPermitidos, array $scripts, $usaEx
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?php echo htmlspecialchars($titulo); ?> · ADG</title>
-  <link rel="stylesheet" href="<?php echo sp_asset('lib/css/solicitudes_proveedores.css'); ?>">
+  <link rel="stylesheet" href="<?php echo sp_asset('lib/css/solicitudes-proveedores/solicitudes_proveedores.css'); ?>">
 </head>
 <body style="margin:0">
   <div class="sp-app" data-org="<?php echo htmlspecialchars($org); ?>">
@@ -48,13 +48,13 @@ function sp_render_vista($titulo, array $rolesPermitidos, array $scripts, $usaEx
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <?php } ?>
   <script src="<?php echo sp_asset('lib/js/servicios.js'); ?>"></script>
-  <script src="<?php echo sp_asset('lib/js/solicitudes_proveedores/sp-core.js'); ?>"></script>
+  <script src="<?php echo sp_asset('lib/js/solicitudes-proveedores/sp-core.js'); ?>"></script>
 <?php if ($usaExcel) { ?>
-  <script src="<?php echo sp_asset('lib/js/solicitudes_proveedores/sp-excel.js'); ?>"></script>
-  <script src="<?php echo sp_asset('lib/js/solicitudes_proveedores/sp-detalle.js'); ?>"></script>
+  <script src="<?php echo sp_asset('lib/js/solicitudes-proveedores/sp-excel.js'); ?>"></script>
+  <script src="<?php echo sp_asset('lib/js/solicitudes-proveedores/sp-detalle.js'); ?>"></script>
 <?php } ?>
 <?php foreach ($scripts as $js) { ?>
-  <script src="<?php echo sp_asset('lib/js/solicitudes_proveedores/' . $js); ?>"></script>
+  <script src="<?php echo sp_asset('lib/js/solicitudes-proveedores/' . $js); ?>"></script>
 <?php } ?>
 <?php } ?>
 </body>

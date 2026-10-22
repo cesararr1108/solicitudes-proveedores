@@ -19,13 +19,13 @@ Compatible con **PHP 5.4** y `mssql_*` (SQL Server 2008+). Sin Composer ni depen
 
 | Vista | Archivo | Roles |
 |---|---|---|
-| Mis solicitudes (proveedor) | `views/sp_proveedor.php` | 9 |
-| Bandeja / Historial / Dashboard | `views/sp_mercadeo.php` | 1, 118, 6 |
-| Tipos de solicitud | `views/sp_tipos_solicitud.php` | 1 |
+| Mis solicitudes (proveedor) | `views/solicitudes-proveedores/sp_proveedor.php` | 9 |
+| Bandeja / Historial / Dashboard | `views/solicitudes-proveedores/sp_mercadeo.php` | 1, 118, 6 |
+| Tipos de solicitud | `views/solicitudes-proveedores/sp_tipos_solicitud.php` | 1 |
 
 Puede abrir una solicitud directamente con `?id=123` (útil para enlaces en correos).
 
-> Las vistas cargan jQuery 3.7.1 (cdnjs) y SheetJS 0.20.3 (`cdn.sheetjs.com`). Si el ADG ya incluye jQuery, o si la red bloquea esos CDN, descárguelos a `lib/js/` y cambie las rutas en `views/sp_layout.php`.
+> Las vistas cargan jQuery 3.7.1 (cdnjs) y SheetJS 0.20.3 (`cdn.sheetjs.com`). Si el ADG ya incluye jQuery, o si la red bloquea esos CDN, descárguelos a `lib/js/` y cambie las rutas en `views/solicitudes-proveedores/sp_layout.php`.
 
 ---
 
@@ -33,7 +33,7 @@ Puede abrir una solicitud directamente con `?id=123` (útil para enlaces en corr
 
 ```
 adg/
-├── controllers/SolicitudesProveedoresController.php   ← único endpoint (POST accion=...)
+├── controllers/solicitudes-proveedores/SolicitudesProveedoresController.php   ← único endpoint (POST accion=...)
 ├── models/SolicitudesProveedores/
 │   ├── config.php                ← reglas parametrizables
 │   ├── bootstrap.php             ← autoload
@@ -54,12 +54,13 @@ adg/
 │       ├── Http/                 ← ControladorHttp (acción → caso de uso), sesión → Actor
 │       ├── Notificacion/         ← NotificadorNulo (reemplazable por correo)
 │       └── Contenedor.php        ← composición de dependencias
-├── lib/js/solicitudes_proveedores/
+├── views/solicitudes-proveedores/       ← sp_layout, sp_proveedor, sp_mercadeo, sp_tipos_solicitud
+├── lib/js/solicitudes-proveedores/
 │   ├── sp-core.js      ← API (usa enviarPeticion), drawer, toasts, cargador de archivos (Ctrl+V)
 │   ├── sp-excel.js     ← lectura/plantillas/exportación con SheetJS
 │   ├── sp-detalle.js   ← detalle compartido (proveedor y mercadeo)
 │   ├── sp-proveedor.js / sp-mercadeo.js / sp-tipos.js
-├── lib/css/solicitudes_proveedores.css   ← prefijo .sp-, tema por organización
+├── lib/css/solicitudes-proveedores/solicitudes_proveedores.css   ← prefijo .sp-, tema por organización
 ├── sql/solicitudes_proveedores.sql
 └── tests/SolicitudesProveedores/DominioTest.php
 ```
@@ -69,7 +70,7 @@ Las dependencias van hacia adentro: `Infraestructura → Aplicacion → Dominio`
 ### Flujo de una petición
 
 ```
-JS: SP.api('cambiar_estado', {...})  →  enviarPeticion()  →  SolicitudesProveedoresController.php
+JS: SP.api('cambiar_estado', {...})  →  enviarPeticion()  →  controllers/solicitudes-proveedores/SolicitudesProveedoresController.php
   → ControladorHttp: valida POST + X-Requested-With, arma Actor desde $_SESSION
   → Contenedor->obtener('solicitudes.estado')->ejecutar($actor, $_POST)
        → PoliticaAcceso (permiso) → Validador (datos) → Solicitud->cambiarEstado() (regla)
@@ -141,6 +142,8 @@ El formulario del proveedor, la plantilla descargable y la prevalidación salen 
 - `ConexionMssql` escapa todo parámetro (`:nombre`) según su tipo. No concatene valores del usuario en SQL.
 - Protección CSRF básica: el endpoint exige `X-Requested-With: XMLHttpRequest` (jQuery lo envía).
 - Se validan la URL y la ruta de cada adjunto contra `ruta_ftp`: no se puede registrar un enlace externo.
+
+- Rutas relativas: las vistas están en `views/solicitudes-proveedores/`, por eso `SP.config` (sp-core.js) apunta a `../../controllers/...` y `../../models/ServiceUploadFile.php`. Como `subirArchivos()` de `servicios.js` tiene la ruta fija `../models/ServiceUploadFile.php`, `sp-core.js` la corrige con un `$.ajaxPrefilter` solo para esa URL, sin modificar `servicios.js`. Si mueve las vistas, ajuste `SP.config` (o defina `window.SP_CONFIG` antes de cargar sp-core.js).
 
 ### Observaciones sobre código existente (no modificado)
 

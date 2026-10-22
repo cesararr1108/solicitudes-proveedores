@@ -1,6 +1,7 @@
 /* =====================================================================
    SOLICITUDES DE PROVEEDORES - Nucleo compartido
-   Requiere: jQuery, ../lib/js/servicios.js (enviarPeticion, subirArchivos)
+   Requiere: jQuery, lib/js/servicios.js (enviarPeticion, subirArchivos)
+   Las vistas viven en views/solicitudes-proveedores/, por eso las rutas suben dos niveles.
    ===================================================================== */
 (function (window, $) {
   'use strict';
@@ -8,8 +9,20 @@
   const SP = window.SP = window.SP || {};
 
   SP.config = $.extend({
-    controlador: '../controllers/SolicitudesProveedoresController.php'
+    controlador: '../../controllers/solicitudes-proveedores/SolicitudesProveedoresController.php',
+    servicioSubida: '../../models/ServiceUploadFile.php'
   }, window.SP_CONFIG || {});
+
+  /*
+   * subirArchivos() de servicios.js usa la ruta fija '../models/ServiceUploadFile.php',
+   * pensada para vistas en views/. Como este modulo esta en views/solicitudes-proveedores/,
+   * se corrige la URL solo para esa peticion, sin modificar servicios.js.
+   */
+  $.ajaxPrefilter(function (opciones) {
+    if (opciones.url === '../models/ServiceUploadFile.php') {
+      opciones.url = SP.config.servicioSubida;
+    }
+  });
 
   /* ------------------------------------------------------------------
      API: todas las peticiones pasan por enviarPeticion() de servicios.js
