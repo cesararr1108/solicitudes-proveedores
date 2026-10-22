@@ -35,7 +35,8 @@
     st.$root.html(
       '<header class="sp-header"><div><h1 class="sp-header__title">Solicitudes de proveedores</h1>' +
       '<p class="sp-header__sub"><span class="sp-org-chip">Org. ' + SP.esc(a.organizacion || 'Todas') + '</span><span>' + SP.esc(a.nombre) + ' · ' + SP.esc(perfil) + '</span></p></div>' +
-      '<button type="button" class="sp-btn" data-refrescar title="Actualizar">' + SP.icono('refresh') + 'Actualizar</button></header>' +
+      '<div class="sp-flex">' + (a.perfil === 'ADMINISTRADOR' ? '<a class="sp-btn" href="sp_tipos_solicitud.php">' + SP.icono('settings') + 'Tipos de solicitud</a>' : '') +
+      '<button type="button" class="sp-btn" data-refrescar title="Actualizar">' + SP.icono('refresh') + 'Actualizar</button></div></header>' +
       '<nav class="sp-nav" role="tablist">' +
         '<button type="button" class="sp-nav__item" role="tab" data-vista="bandeja">' + SP.icono('inbox') + 'Solicitudes <span class="sp-count" data-conteo-abiertas hidden>0</span></button>' +
         '<button type="button" class="sp-nav__item" role="tab" data-vista="historial">' + SP.icono('history') + 'Historial</button>' +

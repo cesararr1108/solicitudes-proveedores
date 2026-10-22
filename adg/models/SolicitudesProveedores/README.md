@@ -23,6 +23,8 @@ Compatible con **PHP 5.4** y `mssql_*` (SQL Server 2008+). Sin Composer ni depen
 | Bandeja / Historial / Dashboard | `views/solicitudes-proveedores/sp_mercadeo.php` | 1, 118, 6 |
 | Tipos de solicitud | `views/solicitudes-proveedores/sp_tipos_solicitud.php` | 1 |
 
+El menú puede apuntar a la carpeta `views/solicitudes-proveedores/`: su `index.php` redirige según el rol (9 → proveedor; 1, 118, 6 → mercadeo). El administrador entra a *Tipos de solicitud* desde un botón en la vista de mercadeo.
+
 Puede abrir una solicitud directamente con `?id=123` (útil para enlaces en correos).
 
 > Las vistas cargan jQuery 3.7.1 (cdnjs) y SheetJS 0.20.3 (`cdn.sheetjs.com`). Si el ADG ya incluye jQuery, o si la red bloquea esos CDN, descárguelos a `lib/js/` y cambie las rutas en `views/solicitudes-proveedores/sp_layout.php`.
