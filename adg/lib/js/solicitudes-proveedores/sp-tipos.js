@@ -109,7 +109,8 @@
           '<span class="sp-field__help">Separadas por coma. Vacio = extensiones por defecto.</span></div>' +
         '</div>' +
         '<div class="sp-alert sp-alert--info" data-solo-excel>' + SP.icono('lock') + 'Las plantillas Excel siempre exigen el archivo (.xlsx, .xls).</div>' +
-        '<div class="sp-grid-2"><div class="sp-field"><label for="t-orden">Orden</label><input id="t-orden" type="number" min="0" name="orden" class="sp-input" value="' + (+t.ORDEN || 0) + '"></div>' +
+        '<div class="sp-grid-2"><div class="sp-field"><label for="t-orden">Orden en la lista</label><input id="t-orden" type="number" min="0" name="orden" class="sp-input" value="' + (+t.ORDEN || 0) + '">' +
+          '<span class="sp-field__help">Posicion en que el proveedor ve este tipo al crear una solicitud (1 = primero).</span></div>' +
         '<div class="sp-field"><span class="sp-label">Estado</span><label class="sp-switch" style="height:36px"><input type="checkbox" name="activo"' + (+t.ACTIVO ? ' checked' : '') + '><span></span>Activo</label></div></div>' +
         '</form>',
       pie: '<button type="button" class="sp-btn sp-btn--ghost" data-cerrar>Cancelar</button><button type="button" class="sp-btn sp-btn--primary" data-guardar>' + SP.icono('check') + 'Guardar</button>'

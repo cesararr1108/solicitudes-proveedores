@@ -37,8 +37,12 @@ return array(
 
     // Adjuntos
     'adjuntos' => array(
-        'url_base'        => 'https://app.pwmultiroma.com',
-        'ruta_ftp'        => '/adg/archivos/solicitudes_proveedores',
+        // Carpeta del FTP donde ServiceUploadFile.php deja los archivos (debe existir).
+        'ruta_ftp'        => 'web/soportes-solicitudes-mercadeo',
+        // URL publica de esa carpeta, para abrir/descargar los archivos desde el navegador.
+        // Verifiquela abriendo un archivo subido: si la carpeta "web" del FTP es la raiz del sitio,
+        // quite "/web" -> 'https://app.pwmultiroma.com/soportes-solicitudes-mercadeo'.
+        'url_archivos'    => 'https://app.pwmultiroma.com/web/soportes-solicitudes-mercadeo',
         'max_mb'          => 10,
         'max_por_envio'   => 10,
         'ext_gestion'     => array('pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'zip', 'msg'),

@@ -130,11 +130,14 @@ ok($v->errores(array('asunto' => 'ok', 'n' => 2)) === array(), 'datos validos');
 
 echo "== Adjuntos\n";
 $ra = new D\ReglasAdjunto($config['adjuntos']);
-$base = 'https://app.pwmultiroma.com/adg/archivos/solicitudes_proveedores/';
-ok(count($ra->normalizar(array(array('nombre' => 'a.PDF', 'ruta' => '/adg/archivos/solicitudes_proveedores/sp_1.pdf', 'url' => $base . 'sp_1.pdf', 'tamano_kb' => 10)), array('pdf'))) === 1, 'adjunto valido');
-ok(lanza(function () use ($ra, $base) { $ra->normalizar(array(array('nombre' => 'a.exe', 'ruta' => '/adg/archivos/solicitudes_proveedores/x.exe', 'url' => $base . 'x.exe')), array('pdf')); }, 'Exception'), 'rechaza extension');
-ok(lanza(function () use ($ra) { $ra->normalizar(array(array('nombre' => 'a.pdf', 'ruta' => '/otro/x.pdf', 'url' => 'https://evil.com/x.pdf')), array('pdf')); }, 'Exception'), 'rechaza URL externa');
-ok(lanza(function () use ($ra, $base) { $ra->normalizar(array(array('nombre' => 'a.pdf', 'ruta' => '/adg/archivos/solicitudes_proveedores/../x.pdf', 'url' => $base . '../x.pdf')), array('pdf')); }, 'Exception'), 'rechaza ..');
+$n = $ra->normalizar(array(array('nombre' => 'a.PDF', 'ruta' => 'web/soportes-solicitudes-mercadeo/sp_1.pdf', 'url' => 'https://evil.com/x', 'tamano_kb' => 10)), array('pdf'));
+ok(count($n) === 1 && $n[0]['url'] === 'https://app.pwmultiroma.com/web/soportes-solicitudes-mercadeo/sp_1.pdf', 'adjunto valido; la URL la arma el servidor: ' . $n[0]['url']);
+$n = $ra->normalizar(array(array('nombre' => 'b.pdf', 'ruta' => '/web/soportes-solicitudes-mercadeo/sp_2.pdf')), array('pdf'));
+ok($n[0]['ruta'] === 'web/soportes-solicitudes-mercadeo/sp_2.pdf', 'acepta la ruta con o sin "/" inicial');
+ok(lanza(function () use ($ra) { $ra->normalizar(array(array('nombre' => 'a.exe', 'ruta' => 'web/soportes-solicitudes-mercadeo/x.exe')), array('pdf')); }, 'Exception'), 'rechaza extension');
+ok(lanza(function () use ($ra) { $ra->normalizar(array(array('nombre' => 'a.pdf', 'ruta' => 'otro/x.pdf')), array('pdf')); }, 'Exception'), 'rechaza otra carpeta');
+ok(lanza(function () use ($ra) { $ra->normalizar(array(array('nombre' => 'a.pdf', 'ruta' => 'web/soportes-solicitudes-mercadeo/../x.pdf')), array('pdf')); }, 'Exception'), 'rechaza ..');
+ok(lanza(function () use ($ra) { $ra->normalizar(array(array('nombre' => 'a.pdf', 'ruta' => 'web/soportes-solicitudes-mercadeo/sub/x.pdf')), array('pdf')); }, 'Exception'), 'rechaza subcarpetas');
 
 echo $fallos ? "\n$fallos FALLOS\n" : "\nTODO OK\n";
 exit($fallos ? 1 : 0);

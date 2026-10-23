@@ -14,7 +14,8 @@ Compatible con **PHP 5.4** y `mssql_*` (SQL Server 2008+). Sin Composer ni depen
    - Crea los tipos *Descuentos*, *Bonificados* y *Otras solicitudes* con el primer proceso que contenga "MERCADEO" en `T_CAL_PROCESOS`. Si su proceso tiene otro nombre, ajuste el `SELECT` del bloque 8.
 2. Revise `adg/models/SolicitudesProveedores/config.php`:
    - `db_charset`: use `ISO-8859-1` si FreeTDS entrega Latin-1 (lo normal con `Modern_Spanish_CI_AS`). Use `UTF-8` si `freetds.conf` tiene `client charset = UTF-8`.
-   - `adjuntos.ruta_ftp`: carpeta remota donde `ServiceUploadFile.php` deja los archivos. **La carpeta debe existir en el FTP.**
+   - `adjuntos.ruta_ftp` (`web/soportes-solicitudes-mercadeo`): carpeta del FTP donde `ServiceUploadFile.php` deja los archivos. **La carpeta debe existir en el FTP.**
+   - `adjuntos.url_archivos`: URL pública de esa carpeta. El módulo arma con ella el enlace de cada archivo, sin usar la URL que devuelve `ServiceUploadFile.php`. Verifíquela abriendo un archivo subido.
    - `roles`: IDs de `T_ROLES` (1 administrador, 118 gerente, 6 auxiliar, 9 proveedor).
 3. Registre el módulo en el menú (`T_MODULOS`) con **`ARCHIVO = 'solicitudes-proveedores/index'`**. El script `adg/sql/solicitudes_proveedores_menu.sql` trae el `INSERT` de ejemplo. Dé acceso a los roles 1, 6, 9 y 118.
 
@@ -161,7 +162,7 @@ El formulario del proveedor, la plantilla descargable y la prevalidación salen 
 - Paginación con `ROW_NUMBER()` (compatible 2008). Inserción del detalle por lotes con `INSERT ... SELECT ... UNION ALL` (compatible 2005+).
 - `ConexionMssql` escapa todo parámetro (`:nombre`) según su tipo. No concatene valores del usuario en SQL.
 - Protección CSRF básica: el endpoint exige `X-Requested-With: XMLHttpRequest` (jQuery lo envía).
-- Se validan la URL y la ruta de cada adjunto contra `ruta_ftp`: no se puede registrar un enlace externo.
+- Cada adjunto debe estar directamente dentro de `ruta_ftp`. La URL se arma en el servidor con `url_archivos`, así que no se puede registrar un enlace externo.
 
 - Rutas: `sp_layout.php` inyecta `window.SP_CONFIG` con las URLs absolutas del controlador, de `ServiceUploadFile.php` y de las vistas. Como `subirArchivos()` de `servicios.js` tiene la ruta fija `../models/ServiceUploadFile.php`, `sp-core.js` la corrige con un `$.ajaxPrefilter` solo para esa URL, sin modificar `servicios.js`.
 

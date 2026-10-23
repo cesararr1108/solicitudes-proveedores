@@ -17,7 +17,8 @@ class ReglasAdjunto
     }
 
     /**
-     * @param array $adjuntos lista de {nombre, ruta, url, tamano_kb}
+     * La URL publica se arma aqui (url_archivos + nombre del archivo); no se confia en la del cliente.
+     * @param array $adjuntos lista de {nombre, ruta, tamano_kb}
      * @param array $extPermitidas
      * @return array adjuntos normalizados
      */
@@ -26,23 +27,24 @@ class ReglasAdjunto
         if (count($adjuntos) > $this->config['max_por_envio']) {
             throw new ValidacionException('Maximo ' . $this->config['max_por_envio'] . ' archivos por envio');
         }
-        $prefijoRuta = rtrim($this->config['ruta_ftp'], '/') . '/';
-        $prefijoUrl  = rtrim($this->config['url_base'], '/') . $prefijoRuta;
+        $prefijoRuta = trim($this->config['ruta_ftp'], '/') . '/';
+        $urlCarpeta  = rtrim($this->config['url_archivos'], '/') . '/';
         $maxKb       = (int) $this->config['max_mb'] * 1024;
         $salida      = array();
 
         foreach ($adjuntos as $i => $a) {
             $nombre = isset($a['nombre']) ? trim($a['nombre']) : '';
-            $ruta   = isset($a['ruta']) ? trim($a['ruta']) : '';
-            $url    = isset($a['url']) ? trim($a['url']) : '';
+            // Con o sin "/" inicial: ServiceUploadFile devuelve la ruta tal como se le envio
+            $ruta   = isset($a['ruta']) ? ltrim(trim($a['ruta']), '/') : '';
+            $archivo = substr($ruta, strlen($prefijoRuta));
             $kb     = isset($a['tamano_kb']) ? (int) $a['tamano_kb'] : 0;
             $ext    = strtolower(pathinfo($nombre, PATHINFO_EXTENSION));
             $campo  = 'adjuntos.' . $i;
 
-            if ($nombre === '' || $ruta === '' || $url === '') {
+            if ($nombre === '' || $ruta === '') {
                 throw new ValidacionException('Adjunto incompleto', array($campo => 'Faltan datos del archivo'));
             }
-            if (strpos($ruta, $prefijoRuta) !== 0 || strpos($url, $prefijoUrl) !== 0 || strpos($ruta, '..') !== false) {
+            if (strpos($ruta, $prefijoRuta) !== 0 || !preg_match('/^[A-Za-z0-9._-]+$/', (string) $archivo) || strpos($ruta, '..') !== false) {
                 throw new ValidacionException('Ubicacion de archivo no valida', array($campo => $nombre));
             }
             if (!in_array($ext, $extPermitidas, true)) {
@@ -57,7 +59,7 @@ class ReglasAdjunto
             $salida[] = array(
                 'nombre'    => substr($nombre, 0, 255),
                 'ruta'      => $ruta,
-                'url'       => $url,
+                'url'       => $urlCarpeta . $archivo,
                 'extension' => $ext,
                 'tamano_kb' => $kb,
             );
