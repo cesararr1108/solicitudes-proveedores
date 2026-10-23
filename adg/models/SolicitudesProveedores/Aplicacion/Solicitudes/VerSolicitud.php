@@ -45,6 +45,10 @@ class VerSolicitud
         $internos  = $this->politica->puedeVerComentariosInternos($actor);
         $permisos  = $this->politica->permisos($actor, $s);
 
+        // Lo que llego despues de esta fecha se marca como "nuevo" en la UI
+        $lecturaAnterior = $this->seguimiento->ultimaLectura($id, $actor->id());
+        $this->seguimiento->marcarLectura($id, $actor->id());
+
         return array(
             'solicitud'   => $vista,
             'plantilla'   => array('codigo' => $plantilla->codigo(), 'columnas' => $plantilla->columnas()),
@@ -54,6 +58,7 @@ class VerSolicitud
             'historial'   => $this->seguimiento->listarHistorial($id, $internos),
             'permisos'    => $permisos,
             'asignables'  => $permisos['asignar_a_otros'] ? $this->asignables($actor) : array(),
+            'lectura_anterior' => $lecturaAnterior,
         );
     }
 

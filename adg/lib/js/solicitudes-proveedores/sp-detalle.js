@@ -11,12 +11,14 @@
   SP.detalle = {
     /**
      * @param {number} id
-     * @param {object} op { catalogos, alCambiar(), pestana }
+     * @param {object} op { catalogos, alCambiar(), alCerrar(), pestana }
      */
     abrir: function (id, op) {
       op = op || {};
-      const estado = { id: id, pestana: op.pestana || 'detalle', datos: null, cargador: null };
+      const estado = { id: id, pestana: op.pestana || 'detalle', datos: null, cargador: null, primeraCarga: true };
       const drawer = SP.drawer.abrir({
+        completo: true,
+        alCerrar: op.alCerrar,
         titulo: 'Solicitud #' + id,
         subtitulo: '<span class="sp-skeleton" style="width:160px;display:inline-block"></span>',
         cuerpo: '<div class="sp-skeleton" style="height:60px;margin-bottom:16px"></div><div class="sp-skeleton" style="width:70%;margin-bottom:10px"></div><div class="sp-skeleton" style="width:50%"></div>',
@@ -38,10 +40,50 @@
   function cargar(estado) {
     return SP.api('ver', { id: estado.id }).then(function (datos) {
       estado.datos = datos;
+      marcarNovedades(estado);
       pintar(estado);
+      estado.primeraCarga = false;
     }, function (err) {
       estado.drawer.cuerpo(SP.vacio('No fue posible cargar la solicitud', err.message, 'alert'));
     });
+  }
+
+  /**
+   * Marca como "_nuevo" lo que hizo la contraparte despues de la ultima vez que el usuario abrio la solicitud.
+   * Proveedor: lo que hizo mercadeo (sin notas internas). Mercadeo: lo que hizo el proveedor.
+   */
+  function marcarNovedades(estado) {
+    const d = estado.datos;
+    const actor = (estado.op.catalogos && estado.op.catalogos.actor) || {};
+    const esProveedor = actor.perfil === 'PROVEEDOR';
+    const lectura = d.lectura_anterior;
+    const esNuevo = function (x) {
+      if (+x.USUARIO_ID === +actor.id) { return false; }
+      if (esProveedor ? +x.ES_PROVEEDOR === 1 : +x.ES_PROVEEDOR !== 1) { return false; }
+      if (esProveedor && (x.EVENTO === 'COMENTARIO_INTERNO' || +x.INTERNO === 1)) { return false; }
+      return !lectura || x.FECHA > lectura;
+    };
+    d.comentarios.forEach(function (c) { c._nuevo = esNuevo(c); });
+    d.historial.forEach(function (h) { h._nuevo = esNuevo(h); });
+    d.novedades = d.historial.filter(function (h) { return h._nuevo; });
+    d.esProveedor = esProveedor;
+    // Si hay mensajes nuevos, abrir directamente la conversacion
+    if (estado.primeraCarga && !estado.op.pestana && d.comentarios.some(function (c) { return c._nuevo; })) {
+      estado.pestana = 'conversacion';
+    }
+  }
+
+  /** Aviso con lo que cambio desde la ultima visita (asignacion, estado, mensajes). */
+  function avisoNovedades(d) {
+    if (!d.novedades || !d.novedades.length) { return ''; }
+    const hayMensajes = d.comentarios.some(function (c) { return c._nuevo; });
+    return '<div class="sp-aviso-nuevo" role="status">' + SP.icono('chat') +
+      '<div><b>' + (d.esProveedor ? 'Respuesta del departamento de mercadeo' : 'Novedades del proveedor') + '</b>' +
+      '<ul>' + d.novedades.slice().reverse().map(function (h) {
+        return '<li>' + textoEvento(h) + ' <span class="sp-muted">· ' + SP.fmt.relativo(h.FECHA) + '</span></li>';
+      }).join('') + '</ul></div>' +
+      (hayMensajes ? '<button type="button" class="sp-btn sp-btn--sm" data-ir-conversacion>' + SP.icono('chat') + 'Ver mensajes</button>' : '') +
+      '</div>';
   }
 
   function recargar(estado, mensaje) {
@@ -65,6 +107,7 @@
     // El contenedor se reutiliza al recargar: quitar manejadores previos para no duplicarlos
     drawer.$el.find('.sp-drawer__body').off();
     const $body = drawer.cuerpo(
+      avisoNovedades(d) +
       progreso(s) +
       barraAcciones(d) +
       '<nav class="sp-subnav" role="tablist">' +
@@ -77,6 +120,9 @@
       '<section data-panel="historial"' + (estado.pestana !== 'historial' ? ' hidden' : '') + '>' + panelHistorial(d) + '</section>'
     );
 
+    $body.on('click', '[data-ir-conversacion]', function () {
+      $body.find('[data-tab=conversacion]').trigger('click');
+    });
     $body.on('click', '[data-tab]', function () {
       estado.pestana = $(this).data('tab');
       $body.find('[data-tab]').attr('aria-selected', 'false');
@@ -151,7 +197,15 @@
       if (!usuario) { SP.toast('Seleccione a quien asignar', 'error'); return; }
       SP.boton.cargando($b, 'Asignando...');
       SP.api('asignar', { id: s.ID, usuario_id: usuario }).then(function (r) {
-        recargar(estado, 'Asignada a ' + r.asignado_nombre);
+        const actor = (estado.op.catalogos && estado.op.catalogos.actor) || {};
+        if (+r.asignado_a === +actor.id) {
+          recargar(estado, 'La solicitud quedo asignada a usted');
+          return;
+        }
+        // Ya no es responsable de la solicitud: se cierra el detalle y se actualiza la lista
+        SP.toast('Solicitud #' + s.ID + ' asignada a ' + r.asignado_nombre, 'ok');
+        if (estado.op.alCambiar) { estado.op.alCambiar(); }
+        estado.drawer.cerrar();
       }, function (err) { SP.boton.restaurar($b); SP.toast(err.message, 'error'); });
     });
 
@@ -244,11 +298,12 @@
     }
     d.comentarios.forEach(function (c) {
       const adj = porComentario[c.ID] || [];
-      html += '<article class="sp-msg ' + (+c.INTERNO ? 'sp-msg--interno' : '') + '">' +
+      html += '<article class="sp-msg ' + (+c.INTERNO ? 'sp-msg--interno' : '') + (c._nuevo ? ' sp-msg--nuevo' : '') + '">' +
         '<span class="sp-avatar ' + (+c.ES_PROVEEDOR ? 'sp-avatar--prov' : '') + '">' + SP.esc(SP.iniciales(c.USUARIO)) + '</span>' +
         '<div class="sp-msg__body"><div class="sp-msg__head"><span class="sp-msg__author">' + SP.esc(c.USUARIO) + '</span>' +
         (+c.ES_PROVEEDOR ? '<span class="sp-tag">Proveedor</span>' : '<span class="sp-tag sp-tag--brand">Mercadeo</span>') +
         (+c.INTERNO ? '<span class="sp-tag sp-tag--warn">' + SP.icono('lock') + ' Nota interna</span>' : '') +
+        (c._nuevo ? '<span class="sp-tag sp-tag--nuevo">Nuevo</span>' : '') +
         '<span class="sp-msg__time" title="' + SP.esc(SP.fmt.fecha(c.FECHA)) + '">' + SP.fmt.relativo(c.FECHA) + '</span></div>' +
         (c.COMENTARIO ? '<div class="sp-msg__text">' + SP.esc(c.COMENTARIO) + '</div>' : '') +
         (adj.length ? '<div class="sp-files">' + adj.map(function (a) { return SP.archivoChip(a); }).join('') + '</div>' : '') +
@@ -332,7 +387,7 @@
   function panelHistorial(d) {
     if (!d.historial.length) { return SP.vacio('Sin movimientos', '', 'history'); }
     return '<ol class="sp-timeline">' + d.historial.slice().reverse().map(function (h) {
-      return '<li><span class="sp-timeline__dot ' + (h.ESTADO_NUEVO === 'FINALIZADO' ? 'sp-timeline__dot--fin' : (h.EVENTO === 'ESTADO' || h.EVENTO === 'CREADA' ? 'sp-timeline__dot--brand' : '')) + '"></span>' +
+      return '<li' + (h._nuevo ? ' class="is-nuevo"' : '') + '><span class="sp-timeline__dot ' + (h.ESTADO_NUEVO === 'FINALIZADO' ? 'sp-timeline__dot--fin' : (h.EVENTO === 'ESTADO' || h.EVENTO === 'CREADA' ? 'sp-timeline__dot--brand' : '')) + '"></span>' +
         '<div class="sp-timeline__text">' + textoEvento(h) + '</div>' +
         '<div class="sp-timeline__time">' + SP.fmt.fecha(h.FECHA) + (h.DETALLE ? ' · ' + SP.esc(h.DETALLE) : '') + '</div></li>';
     }).join('') + '</ol>';

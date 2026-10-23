@@ -10,7 +10,8 @@
 
   const st = { cat: null, vista: 'bandeja', $root: null, $panel: null };
 
-  const bandeja = { asignacion: 'todas', estado: '', proveedor: '', tipo_id: '', texto: '', pagina: 1 };
+  const bandeja = { asignacion: 'todas', estado: '', proveedor: '', tipo_id: '', texto: '', pagina: 1, novedades: 0 };
+  const REFRESCO_MS = 60000;
   const historial = { estado: 'FINALIZADO', desde: SP.fmt.hoy(-90), hasta: SP.fmt.hoy(), proveedor: '', tipo_id: '', asignado_a: '', texto: '', pagina: 1 };
   const dash = { desde: SP.fmt.hoy(-30), hasta: SP.fmt.hoy(), proveedor: '', tipo_id: '', asignado_a: '' };
 
@@ -22,6 +23,10 @@
       if (cat.actor.perfil === 'AUXILIAR') { bandeja.asignacion = 'mias'; }
       pintarShell();
       cambiarVista(st.vista);
+      // Refresco automatico de la bandeja (nuevas solicitudes y mensajes del proveedor)
+      setInterval(function () {
+        if (st.vista === 'bandeja' && !document.hidden && !SP.drawer.abierto()) { listarBandeja(true); }
+      }, REFRESCO_MS);
       const id = new URLSearchParams(window.location.search).get('id');
       if (id && /^\d+$/.test(id)) { abrirDetalle(+id); }
     }, function (err) {
@@ -57,7 +62,11 @@
   }
 
   function abrirDetalle(id) {
-    SP.detalle.abrir(id, { catalogos: st.cat, alCambiar: function () { refrescarActual(); } });
+    SP.detalle.abrir(id, {
+      catalogos: st.cat,
+      alCambiar: function () { refrescarActual(); },
+      alCerrar: function () { if (st.vista === 'bandeja') { listarBandeja(true); } }
+    });
   }
 
   function refrescarActual() {
@@ -108,6 +117,7 @@
     st.$panel.html(
       '<div class="sp-toolbar"><div class="sp-chips" role="group" aria-label="Asignacion">' +
         chipAsig('todas', 'Todas las abiertas', 'ABIERTAS') + chipAsig('sin_asignar', 'Sin asignar', 'SIN_ASIGNAR') + chipAsig('mias', 'Asignadas a mi', 'MIAS') +
+        '<button type="button" class="sp-chip" data-solo-novedades aria-pressed="' + !!bandeja.novedades + '"><span class="sp-dot-nuevo"></span>Con novedades <span class="sp-count" data-c="NOVEDADES">·</span></button>' +
       '</div><span style="flex:1"></span><div class="sp-chips" role="group" aria-label="Estado">' +
         chipEstado('', 'Todos') + chipEstado('PENDIENTE', 'Pendientes') + chipEstado('EN_CURSO', 'En curso') +
       '</div></div>' +
@@ -124,6 +134,11 @@
     st.$panel.on('click', '[data-asig]', function () {
       bandeja.asignacion = $(this).data('asig'); bandeja.pagina = 1;
       st.$panel.find('[data-asig]').attr('aria-pressed', 'false'); $(this).attr('aria-pressed', 'true');
+      listarBandeja();
+    });
+    st.$panel.on('click', '[data-solo-novedades]', function () {
+      bandeja.novedades = bandeja.novedades ? 0 : 1; bandeja.pagina = 1;
+      $(this).attr('aria-pressed', String(!!bandeja.novedades));
       listarBandeja();
     });
     st.$panel.on('click', '[data-est]', function () {
@@ -156,16 +171,17 @@
     return '<button type="button" class="sp-chip" data-est="' + valor + '" aria-pressed="' + (bandeja.estado === valor) + '">' + texto + '</button>';
   }
 
-  function listarBandeja() {
+  function listarBandeja(silencioso) {
     const $f = st.$panel.find('[data-filas]');
     if (!$f.length) { return; }
-    $f.html(SP.skeletonFilas(8, 6));
+    if (!silencioso) { $f.html(SP.skeletonFilas(8, 6)); }
     const params = $.extend({}, bandeja, { abiertas: 1, orden: 'antiguas' });
     return SP.api('listar', params).then(function (r) {
       const c = r.conteos;
       const abiertas = (c.PENDIENTE || 0) + (c.EN_CURSO || 0);
       st.$panel.find('[data-c=SIN_ASIGNAR]').text(c.SIN_ASIGNAR);
       st.$panel.find('[data-c=MIAS]').text(c.MIAS);
+      st.$panel.find('[data-c=NOVEDADES]').text(c.NOVEDADES || 0);
       st.$panel.find('[data-c=ABIERTAS]').text(bandeja.asignacion === 'todas' ? abiertas : '·');
       st.$root.find('[data-conteo-abiertas]').text(c.SIN_ASIGNAR).attr('title', c.SIN_ASIGNAR + ' sin asignar').prop('hidden', !c.SIN_ASIGNAR);
 
@@ -175,10 +191,11 @@
         $f.html('<tr><td colspan="8">' + SP.vacio(msg[0], msg[1], 'check') + '</td></tr>');
       } else {
         $f.html(r.filas.map(function (s) {
-          return '<tr class="sp-row" tabindex="0" data-id="' + s.ID + '">' +
+          const nuevo = +s.NOVEDADES > 0;
+          return '<tr class="sp-row' + (nuevo ? ' sp-row--nuevo' : '') + '" tabindex="0" data-id="' + s.ID + '">' +
             '<td><span class="sp-id">#' + s.ID + '</span></td>' +
             '<td><div class="sp-cell-main">' + SP.esc(s.PROVEEDOR || s.CODIGO_SAP_PROVEEDOR) + '</div><div class="sp-cell-sub">' + SP.esc(s.USUARIO) + '</div></td>' +
-            '<td><div>' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + '</div></td>' +
+            '<td><div>' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + '</div>' + (nuevo ? SP.textoNovedad(s, false) : '') + '</td>' +
             '<td>' + SP.badge(s.ESTADO) + '</td>' +
             '<td>' + SP.persona(s.ASIGNADO) + '</td>' +
             '<td>' + SP.antiguedad(s.MINUTOS, r.sla) + '</td>' +

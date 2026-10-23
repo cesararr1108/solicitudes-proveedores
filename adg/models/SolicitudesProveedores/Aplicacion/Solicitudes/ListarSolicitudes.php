@@ -38,6 +38,11 @@ class ListarSolicitudes
             'pagina'     => max(1, Entrada::entero($entrada, 'pagina', 1)),
             'por_pagina' => max(1, min($pag['maximo'], $porPag)),
             'orden'      => Entrada::texto($entrada, 'orden') === 'antiguas' ? 'antiguas' : 'recientes',
+            // Novedades: eventos de la contraparte que el actor aun no ha visto
+            'novedades'         => Entrada::booleano($entrada, 'novedades'),
+            'nov_actor'         => $actor->id(),
+            'nov_es_proveedor'  => $actor->esProveedor(),
+            'nov_rol_proveedor' => (int) $this->config['roles']['proveedor'],
         );
 
         $alcance   = Alcance::para($actor, $this->config);
@@ -47,6 +52,7 @@ class ListarSolicitudes
         $sinEstado = $filtros;
         $sinEstado['estado'] = '';
         $sinEstado['abiertas'] = false;
+        $sinEstado['novedades'] = false;
 
         return array(
             'filas'      => $resultado['filas'],

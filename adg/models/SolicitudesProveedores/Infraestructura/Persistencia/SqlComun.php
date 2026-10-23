@@ -12,6 +12,32 @@ class SqlComun
         INNER JOIN T_MER_TIPOS_SOLICITUD_PROV T ON T.ID = S.TIPO_ID
         OUTER APPLY (SELECT TOP 1 X.NOMBRES FROM T_TERCEROS X WHERE X.CODIGO_SAP = S.CODIGO_SAP_PROVEEDOR) TE";
 
+    /**
+     * FROM de solicitudes. Si los filtros traen "nov_actor", agrega NV (novedades no leidas):
+     *   NV.N         eventos de la contraparte posteriores a la ultima lectura del actor
+     *   NV.ULTIMO_ID ultimo de esos eventos (T_MER_SOLICITUDES_PROV_HISTORIAL.ID)
+     * Contraparte: para el proveedor, mercadeo (sin notas internas); para mercadeo, el proveedor.
+     */
+    public static function desde(array $filtros, array &$params)
+    {
+        if (empty($filtros['nov_actor'])) {
+            return self::FROM_SOLICITUDES;
+        }
+        $esProveedor       = !empty($filtros['nov_es_proveedor']);
+        $params['nov_yo']  = (int) $filtros['nov_actor'];
+        $params['nov_rol'] = (int) $filtros['nov_rol_proveedor'];
+        return self::FROM_SOLICITUDES . "
+        OUTER APPLY (
+            SELECT COUNT(*) AS N, MAX(H.ID) AS ULTIMO_ID
+              FROM T_MER_SOLICITUDES_PROV_HISTORIAL H
+             INNER JOIN T_USUARIOS UH ON UH.ID = H.USUARIO_ID
+             WHERE H.SOLICITUD_ID = S.ID AND H.USUARIO_ID <> :nov_yo
+               AND UH.ROLES_ID " . ($esProveedor ? "<> :nov_rol AND H.EVENTO <> 'COMENTARIO_INTERNO'" : '= :nov_rol') . "
+               AND H.FECHA_CREACION > ISNULL((SELECT L.FECHA_LECTURA FROM T_MER_SOLICITUDES_PROV_LECTURAS L
+                                               WHERE L.SOLICITUD_ID = S.ID AND L.USUARIO_ID = :nov_yo), '19000101')
+        ) NV";
+    }
+
     /** 'YYYY-MM-DD' -> 'YYYYMMDD' (formato que SQL Server interpreta igual con cualquier idioma). */
     public static function fechaSql($fecha)
     {
@@ -39,6 +65,9 @@ class SqlComun
         if (!empty($filtros['estado'])) {
             $w[] = 'S.ESTADO = :f_estado';
             $params['f_estado'] = $filtros['estado'];
+        }
+        if (!empty($filtros['novedades'])) {
+            $w[] = 'NV.N > 0'; // requiere FROM con desde() y nov_actor
         }
         if (!empty($filtros['abiertas'])) {
             $w[] = "S.ESTADO IN ('PENDIENTE', 'EN_CURSO')";

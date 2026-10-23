@@ -10,9 +10,13 @@
 
   const st = {
     cat: null,
-    filtros: { estado: 'PENDIENTE', texto: '', tipo_id: '', pagina: 1 },
+    filtros: { estado: 'PENDIENTE', texto: '', tipo_id: '', pagina: 1, novedades: 0 },
+    estadoPrevio: 'PENDIENTE',
+    totalNovedades: null,
     $root: null
   };
+
+  const REFRESCO_MS = 60000;
 
   $(function () {
     st.$root = $('#sp-root');
@@ -21,6 +25,10 @@
       pintarShell();
       listar();
       abrirDesdeUrl();
+      // Revisa respuestas nuevas de mercadeo sin recargar la pagina
+      setInterval(function () {
+        if (!document.hidden && !SP.drawer.abierto()) { listar(true); }
+      }, REFRESCO_MS);
     }, function (err) {
       st.$root.html(SP.vacio('No fue posible cargar el modulo', err.message, 'alert'));
     });
@@ -43,9 +51,11 @@
       '<nav class="sp-nav" role="tablist">' +
         ['PENDIENTE', 'EN_CURSO', 'FINALIZADO'].map(function (e) {
           return '<button type="button" class="sp-nav__item" role="tab" data-estado="' + e + '" aria-selected="' + (st.filtros.estado === e) + '">' +
-            { PENDIENTE: 'Pendientes', EN_CURSO: 'En curso', FINALIZADO: 'Finalizadas' }[e] + ' <span class="sp-count" data-conteo="' + e + '">0</span></button>';
+            { PENDIENTE: 'Pendientes', EN_CURSO: 'En curso', FINALIZADO: 'Finalizadas' }[e] + ' <span class="sp-count" data-conteo="' + e + '">0</span>' +
+            '<span class="sp-dot-nuevo" data-nov="' + e + '" title="Con respuestas nuevas de mercadeo" hidden></span></button>';
         }).join('') +
       '</nav>' +
+      '<div data-aviso></div>' +
       '<div class="sp-toolbar">' +
         '<div class="sp-search sp-toolbar__grow">' + SP.icono('search') + '<input type="search" class="sp-input" placeholder="Buscar por numero o asunto" data-texto aria-label="Buscar"></div>' +
         '<select class="sp-select" style="width:auto;min-width:180px" data-tipo aria-label="Tipo de solicitud"><option value="">Todos los tipos</option>' +
@@ -60,6 +70,7 @@
     st.$root.on('click', '[data-nueva]', abrirNueva);
     st.$root.on('click', '[data-estado]', function () {
       st.filtros.estado = $(this).data('estado');
+      st.filtros.novedades = 0;
       st.filtros.pagina = 1;
       st.$root.find('[data-estado]').attr('aria-selected', 'false');
       $(this).attr('aria-selected', 'true');
@@ -67,6 +78,15 @@
     });
     st.$root.on('input', '[data-texto]', SP.debounce(function () { st.filtros.texto = $.trim($(this).val()); st.filtros.pagina = 1; listar(); }, 350));
     st.$root.on('change', '[data-tipo]', function () { st.filtros.tipo_id = $(this).val(); st.filtros.pagina = 1; listar(); });
+    st.$root.on('click', '[data-ver-novedades]', function () {
+      st.estadoPrevio = st.filtros.estado || st.estadoPrevio;
+      $.extend(st.filtros, { novedades: 1, estado: '', pagina: 1 });
+      st.$root.find('[data-estado]').attr('aria-selected', 'false');
+      listar();
+    });
+    st.$root.on('click', '[data-quitar-novedades]', function () {
+      st.$root.find('[data-estado="' + st.estadoPrevio + '"]').trigger('click');
+    });
     st.$root.on('click', '[data-pagina]', function () { st.filtros.pagina = +$(this).data('pagina'); listar(); });
     st.$root.on('click keydown', '[data-id]', function (e) {
       if (e.type === 'keydown' && e.key !== 'Enter') { return; }
@@ -74,20 +94,26 @@
     });
   }
 
-  function listar() {
+  /** @param {boolean} silencioso true = sin esqueleto de carga (refresco automatico) */
+  function listar(silencioso) {
     const $f = st.$root.find('[data-filas]');
-    $f.html(SP.skeletonFilas(6, 4));
+    if (!silencioso) { $f.html(SP.skeletonFilas(6, 4)); }
     return SP.api('listar', $.extend({}, st.filtros, { orden: st.filtros.estado === 'FINALIZADO' ? 'recientes' : 'antiguas' })).then(function (r) {
       $.each(r.conteos, function (e, n) { st.$root.find('[data-conteo="' + e + '"]').text(n); });
+      pintarNovedades(r.conteos);
       if (!r.filas.length) {
-        $f.html('<tr><td colspan="6">' + (st.filtros.texto || st.filtros.tipo_id
+        $f.html('<tr><td colspan="6">' + (st.filtros.novedades
+          ? SP.vacio('Esta al dia', 'No hay respuestas nuevas de mercadeo.', 'check')
+          : st.filtros.texto || st.filtros.tipo_id
           ? SP.vacio('Sin resultados', 'Pruebe con otros filtros.', 'search')
           : SP.vacio('No tiene solicitudes ' + SP.ESTADOS[st.filtros.estado].toLowerCase() + 's', st.filtros.estado === 'PENDIENTE' ? 'Cree una nueva solicitud con el boton "Nueva solicitud".' : '')) + '</td></tr>');
       } else {
         $f.html(r.filas.map(function (s) {
-          return '<tr class="sp-row" tabindex="0" data-id="' + s.ID + '">' +
+          const nuevo = +s.NOVEDADES > 0;
+          return '<tr class="sp-row' + (nuevo ? ' sp-row--nuevo' : '') + '" tabindex="0" data-id="' + s.ID + '">' +
             '<td><span class="sp-id">#' + s.ID + '</span></td>' +
-            '<td><div class="sp-cell-main">' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + ' · ' + SP.esc(s.USUARIO) + '</div></td>' +
+            '<td><div class="sp-cell-main">' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + ' · ' + SP.esc(s.USUARIO) + '</div>' +
+            (nuevo ? SP.textoNovedad(s, true) : '') + '</td>' +
             '<td>' + SP.badge(s.ESTADO) + '</td>' +
             '<td class="sp-hide-sm">' + SP.persona(s.ASIGNADO, 'Por asignar') + '</td>' +
             '<td class="sp-hide-sm sp-nowrap" title="' + SP.esc(SP.fmt.fecha(s.FECHA_CREACION)) + '">' + SP.fmt.fecha(s.FECHA_CREACION, false) + '</td>' +
@@ -100,8 +126,33 @@
     });
   }
 
+  /** Aviso superior, puntos en las pestanas y notificacion cuando llega una respuesta nueva. */
+  function pintarNovedades(c) {
+    const total = c.NOVEDADES || 0;
+    ['PENDIENTE', 'EN_CURSO', 'FINALIZADO'].forEach(function (e) {
+      st.$root.find('[data-nov="' + e + '"]').prop('hidden', !(c['NOVEDADES_' + e] > 0));
+    });
+    let html = '';
+    if (st.filtros.novedades) {
+      html = '<div class="sp-alert sp-alert--info" style="align-items:center">' + SP.icono('chat') +
+        '<span style="flex:1">Mostrando solo las solicitudes con respuestas nuevas de mercadeo.</span>' +
+        '<button type="button" class="sp-btn sp-btn--sm" data-quitar-novedades>Ver todas</button></div>';
+    } else if (total > 0) {
+      html = '<div class="sp-aviso-nuevo" style="align-items:center">' + SP.icono('chat') +
+        '<span><b>Mercadeo respondio ' + (total === 1 ? 'en 1 solicitud' : 'en ' + total + ' solicitudes') + '.</b> ' +
+        'Hay asignaciones, cambios de estado o mensajes que aun no ha visto.</span>' +
+        '<button type="button" class="sp-btn sp-btn--sm" data-ver-novedades>Ver respuestas</button></div>';
+    }
+    st.$root.find('[data-aviso]').html(html);
+    if (st.totalNovedades !== null && total > st.totalNovedades) {
+      SP.toast('Tiene una respuesta nueva del departamento de mercadeo', 'ok', 6000);
+    }
+    st.totalNovedades = total;
+  }
+
   function abrirDetalle(id) {
-    SP.detalle.abrir(id, { catalogos: st.cat, alCambiar: listar });
+    // Al cerrar se refresca la lista para quitar la marca de "nuevo" de lo que ya vio
+    SP.detalle.abrir(id, { catalogos: st.cat, alCambiar: listar, alCerrar: function () { listar(true); } });
   }
 
   /* =================================================================
@@ -345,6 +396,7 @@
         f.drawer.cerrar();
         SP.toast('Solicitud #' + r.id + ' enviada a mercadeo', 'ok');
         st.filtros.estado = 'PENDIENTE';
+        st.filtros.novedades = 0;
         st.$root.find('[data-estado]').attr('aria-selected', 'false').filter('[data-estado=PENDIENTE]').attr('aria-selected', 'true');
         listar();
       }, function (err) {

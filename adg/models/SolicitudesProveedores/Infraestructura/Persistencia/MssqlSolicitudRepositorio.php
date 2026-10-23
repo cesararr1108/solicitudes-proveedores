@@ -103,7 +103,19 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
         $desde  = ($filtros['pagina'] - 1) * $filtros['por_pagina'] + 1;
         $hasta  = $desde + $filtros['por_pagina'] - 1;
 
-        $total = (int) $this->db->valor('SELECT COUNT(*) ' . SqlComun::FROM_SOLICITUDES . ' WHERE ' . $where, $params);
+        $from  = SqlComun::desde($filtros, $params);
+        $conNov = !empty($filtros['nov_actor']);
+        $total = (int) $this->db->valor('SELECT COUNT(*) ' . $from . ' WHERE ' . $where, $params);
+
+        // Novedad no leida: cuantas y cual fue la ultima (asignacion, cambio de estado, comentario)
+        $colNov = $conNov
+            ? "ISNULL(NV.N, 0) AS NOVEDADES, HN.EVENTO AS NOVEDAD_EVENTO, HN.ESTADO_NUEVO AS NOVEDAD_ESTADO,
+                       ANV.NOMBRES + ' ' + ANV.APELLIDOS AS NOVEDAD_ASIGNADO,"
+            : '0 AS NOVEDADES,';
+        $joinNov = $conNov
+            ? 'LEFT JOIN T_MER_SOLICITUDES_PROV_HISTORIAL HN ON HN.ID = NV.ULTIMO_ID
+                LEFT JOIN T_USUARIOS ANV ON ANV.ID = HN.ASIGNADO_NUEVO'
+            : '';
 
         $filas = $this->db->consultar(
             "SELECT * FROM (
@@ -115,11 +127,13 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
                        " . SqlComun::fecha('S.FECHA_CREACION') . " AS FECHA_CREACION,
                        " . SqlComun::fecha('S.FECHA_FINALIZACION') . " AS FECHA_FINALIZACION,
                        DATEDIFF(MINUTE, S.FECHA_CREACION, ISNULL(S.FECHA_FINALIZACION, GETDATE())) AS MINUTOS,
+                       $colNov
                        (SELECT " . SqlComun::fecha('MAX(H.FECHA_CREACION)') . " FROM T_MER_SOLICITUDES_PROV_HISTORIAL H
                          WHERE H.SOLICITUD_ID = S.ID) AS ULTIMA_ACTIVIDAD
-                " . SqlComun::FROM_SOLICITUDES . "
+                $from
                 INNER JOIN T_USUARIOS U ON U.ID = S.USUARIO_ID
                 LEFT JOIN T_USUARIOS A ON A.ID = S.ASIGNADO_A
+                $joinNov
                 WHERE $where
              ) X WHERE X.RN BETWEEN :rn_desde AND :rn_hasta ORDER BY X.RN",
             array_merge($params, array('rn_desde' => (int) $desde, 'rn_hasta' => (int) $hasta))
@@ -134,20 +148,30 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
             $conteos[$e] = 0;
         }
 
+        $conNov = !empty($filtros['nov_actor']);
+        $conteos['NOVEDADES'] = 0;
+
         $params = array();
         $where  = SqlComun::condiciones($filtros, $alcance, $actorId, $params, $this->db);
-        foreach ($this->db->consultar('SELECT S.ESTADO, COUNT(*) AS N ' . SqlComun::FROM_SOLICITUDES . ' WHERE ' . $where . ' GROUP BY S.ESTADO', $params) as $f) {
+        $from   = SqlComun::desde($filtros, $params);
+        $sql    = 'SELECT S.ESTADO, COUNT(*) AS N' . ($conNov ? ', SUM(CASE WHEN NV.N > 0 THEN 1 ELSE 0 END) AS NOV' : '')
+                . ' ' . $from . ' WHERE ' . $where . ' GROUP BY S.ESTADO';
+        foreach ($this->db->consultar($sql, $params) as $f) {
             $conteos[$f['ESTADO']] = (int) $f['N'];
+            $nov = $conNov ? (int) $f['NOV'] : 0;
+            $conteos['NOVEDADES_' . $f['ESTADO']] = $nov;
+            $conteos['NOVEDADES'] += $nov;
         }
 
         // Contadores de bandeja (independientes del filtro de asignacion)
         $filtros['asignacion'] = 'todas';
         $params = array('yo' => (int) $actorId);
         $where  = SqlComun::condiciones($filtros, $alcance, $actorId, $params, $this->db);
+        $from   = SqlComun::desde($filtros, $params);
         $f = $this->db->fila(
             "SELECT SUM(CASE WHEN S.ASIGNADO_A IS NULL AND S.ESTADO <> 'FINALIZADO' THEN 1 ELSE 0 END) AS SIN_ASIGNAR,
                     SUM(CASE WHEN S.ASIGNADO_A = :yo AND S.ESTADO <> 'FINALIZADO' THEN 1 ELSE 0 END) AS MIAS
-             " . SqlComun::FROM_SOLICITUDES . ' WHERE ' . $where,
+             " . $from . ' WHERE ' . $where,
             $params
         );
         $conteos['SIN_ASIGNAR'] = $f ? (int) $f['SIN_ASIGNAR'] : 0;

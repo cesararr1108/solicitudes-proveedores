@@ -20,4 +20,10 @@ interface SeguimientoRepositorio
     public function registrarEvento($solicitudId, $usuarioId, $evento, array $datos = array());
 
     public function listarHistorial($solicitudId, $incluirInternos);
+
+    /** @return string|null fecha (AAAA-MM-DD HH:MM:SS) en que el usuario abrio por ultima vez la solicitud */
+    public function ultimaLectura($solicitudId, $usuarioId);
+
+    /** Registra que el usuario acaba de abrir la solicitud (para el indicador de novedades). */
+    public function marcarLectura($solicitudId, $usuarioId);
 }

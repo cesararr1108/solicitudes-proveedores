@@ -190,6 +190,24 @@
     return '<span class="sp-age ' + clase + '" title="' + titulo + '">' + SP.icono('clock') + SP.fmt.duracion(minutos) + '</span>';
   };
 
+  /**
+   * Texto corto de la ultima novedad no leida de una fila del listado.
+   * @param {object} s fila con NOVEDADES, NOVEDAD_EVENTO, NOVEDAD_ESTADO, NOVEDAD_ASIGNADO
+   * @param {boolean} paraProveedor true: la novedad viene de mercadeo; false: viene del proveedor
+   */
+  SP.textoNovedad = function (s, paraProveedor) {
+    let txt;
+    switch (s.NOVEDAD_EVENTO) {
+      case 'ASIGNADA': txt = 'Asignada a ' + (s.NOVEDAD_ASIGNADO || 'mercadeo'); break;
+      case 'ESTADO': txt = s.NOVEDAD_ESTADO === 'FINALIZADO' ? 'Finalizada por mercadeo' : 'Mercadeo inicio la gestion'; break;
+      case 'COMENTARIO': txt = paraProveedor ? 'Nuevo mensaje de mercadeo' : 'Nuevo mensaje del proveedor'; break;
+      case 'CREADA': txt = 'Solicitud nueva'; break;
+      default: txt = paraProveedor ? 'Respuesta de mercadeo' : 'Novedad del proveedor';
+    }
+    const n = +s.NOVEDADES || 0;
+    return '<span class="sp-novedad">' + SP.esc(txt) + (n > 1 ? ' · ' + n + ' novedades' : '') + '</span>';
+  };
+
   SP.persona = function (nombre, vacio) {
     if (!nombre) { return '<span class="sp-unassigned">' + SP.esc(vacio || 'Sin asignar') + '</span>'; }
     return '<span class="sp-person"><span class="sp-avatar">' + SP.esc(SP.iniciales(nombre)) + '</span>' + SP.esc(nombre) + '</span>';
@@ -272,7 +290,7 @@
     abrir: function (opciones) {
       const $ov = $('<div class="sp-overlay"></div>');
       const $d = $(
-        '<aside class="sp-drawer ' + (opciones.angosto ? 'sp-drawer--narrow' : '') + '" role="dialog" aria-modal="true" tabindex="-1">' +
+        '<aside class="sp-drawer ' + (opciones.angosto ? 'sp-drawer--narrow' : '') + (opciones.completo ? ' sp-drawer--full' : '') + '" role="dialog" aria-modal="true" tabindex="-1">' +
           '<header class="sp-drawer__head"><div class="sp-drawer__titles"><h2 class="sp-drawer__title"></h2><div class="sp-drawer__sub"></div></div>' +
           '<button type="button" class="sp-btn sp-btn--ghost sp-btn--icon" data-cerrar aria-label="Cerrar">' + SP.icono('x') + '</button></header>' +
           '<div class="sp-drawer__body"></div>' +

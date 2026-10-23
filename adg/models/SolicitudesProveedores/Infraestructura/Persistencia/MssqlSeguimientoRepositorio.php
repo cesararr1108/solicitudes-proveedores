@@ -96,8 +96,9 @@ class MssqlSeguimientoRepositorio implements SeguimientoRepositorio
     public function listarHistorial($solicitudId, $incluirInternos)
     {
         return $this->db->consultar(
-            "SELECT H.ID, H.EVENTO, H.ESTADO_ANTERIOR, H.ESTADO_NUEVO, H.DETALLE,
+            "SELECT H.ID, H.EVENTO, H.ESTADO_ANTERIOR, H.ESTADO_NUEVO, H.DETALLE, H.USUARIO_ID,
                     U.NOMBRES + ' ' + U.APELLIDOS AS USUARIO,
+                    CASE WHEN U.ROLES_ID = :rol_prov THEN 1 ELSE 0 END AS ES_PROVEEDOR,
                     AA.NOMBRES + ' ' + AA.APELLIDOS AS ASIGNADO_ANTERIOR,
                     AN.NOMBRES + ' ' + AN.APELLIDOS AS ASIGNADO_NUEVO,
                     " . SqlComun::fecha('H.FECHA_CREACION') . " AS FECHA
@@ -107,7 +108,27 @@ class MssqlSeguimientoRepositorio implements SeguimientoRepositorio
                LEFT JOIN T_USUARIOS AN ON AN.ID = H.ASIGNADO_NUEVO
               WHERE H.SOLICITUD_ID = :id" . ($incluirInternos ? '' : " AND H.EVENTO <> 'COMENTARIO_INTERNO'") . '
               ORDER BY H.FECHA_CREACION, H.ID',
-            array('id' => (int) $solicitudId)
+            array('id' => (int) $solicitudId, 'rol_prov' => $this->rolProveedor)
+        );
+    }
+
+    public function ultimaLectura($solicitudId, $usuarioId)
+    {
+        return $this->db->valor(
+            'SELECT ' . SqlComun::fecha('FECHA_LECTURA') . ' FROM T_MER_SOLICITUDES_PROV_LECTURAS
+              WHERE SOLICITUD_ID = :sol AND USUARIO_ID = :usuario',
+            array('sol' => (int) $solicitudId, 'usuario' => (int) $usuarioId)
+        );
+    }
+
+    public function marcarLectura($solicitudId, $usuarioId)
+    {
+        $this->db->ejecutar(
+            'UPDATE T_MER_SOLICITUDES_PROV_LECTURAS SET FECHA_LECTURA = GETDATE()
+              WHERE SOLICITUD_ID = :sol AND USUARIO_ID = :usuario;
+             IF @@ROWCOUNT = 0
+                INSERT INTO T_MER_SOLICITUDES_PROV_LECTURAS (SOLICITUD_ID, USUARIO_ID) VALUES (:sol, :usuario)',
+            array('sol' => (int) $solicitudId, 'usuario' => (int) $usuarioId)
         );
     }
 }

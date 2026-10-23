@@ -9,6 +9,7 @@ Compatible con **PHP 5.4** y `mssql_*` (SQL Server 2008+). Sin Composer ni depen
 ## 1. Instalación
 
 1. Ejecute `adg/sql/solicitudes_proveedores.sql` en la base de datos del ADG.
+   - Si ya lo había ejecutado antes de la tabla de lecturas, ejecute solo `adg/sql/solicitudes_proveedores_v2_lecturas.sql`.
    - Crea las 7 tablas `T_MER_*`.
    - Crea los tipos *Descuentos*, *Bonificados* y *Otras solicitudes* con el primer proceso que contenga "MERCADEO" en `T_CAL_PROCESOS`. Si su proceso tiene otro nombre, ajuste el `SELECT` del bloque 8.
 2. Revise `adg/models/SolicitudesProveedores/config.php`:
@@ -117,6 +118,15 @@ JS: SP.api('cambiar_estado', {...})  →  enviarPeticion()  →  controllers/sol
 - Las descripciones **no se guardan**: siempre se leen de `T_MATERIALES`. Si Excel borró los ceros a la izquierda, el código también se busca con relleno a 18 dígitos.
 - Material anulado o inexistente → error de la fila. Opcional: `validar_material_del_laboratorio`.
 - Todo cambio queda en `T_MER_SOLICITUDES_PROV_HISTORIAL` (creación, asignación, estado, comentario).
+- **Respuestas nuevas**: se guarda cuándo abrió cada usuario cada solicitud (`T_MER_SOLICITUDES_PROV_LECTURAS`).
+  - El proveedor ve lo que hizo mercadeo después de su última visita (asignación, cambio de estado, mensajes; nunca las notas internas):
+    - un aviso arriba con un botón "Ver respuestas" que filtra;
+    - un punto en la pestaña de cada estado;
+    - la fila resaltada con la última novedad;
+    - dentro del detalle, lo nuevo marcado.
+  - Mercadeo ve igual lo que hizo el proveedor: solicitudes nuevas y mensajes.
+  - Las listas se actualizan solas cada 60 segundos y avisan cuando llega algo nuevo.
+- Si el gerente asigna la solicitud a otra persona, el detalle se cierra. El detalle se abre a pantalla completa.
 
 ---
 
