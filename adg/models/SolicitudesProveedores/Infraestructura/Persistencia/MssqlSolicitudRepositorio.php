@@ -127,6 +127,7 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
                        S.CODIGO_SAP_PROVEEDOR, TE.NOMBRES AS PROVEEDOR,
                        U.NOMBRES + ' ' + U.APELLIDOS AS USUARIO,
                        S.ASIGNADO_A, A.NOMBRES + ' ' + A.APELLIDOS AS ASIGNADO,
+                       S.EVENTO_ID, EV.NOMBRE AS EVENTO,
                        " . SqlComun::fecha('S.FECHA_CREACION') . " AS FECHA_CREACION,
                        " . SqlComun::fecha('S.FECHA_FINALIZACION') . " AS FECHA_FINALIZACION,
                        DATEDIFF(MINUTE, S.FECHA_CREACION, ISNULL(S.FECHA_FINALIZACION, GETDATE())) AS MINUTOS,
@@ -136,6 +137,7 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
                 $from
                 INNER JOIN T_USUARIOS U ON U.ID = S.USUARIO_ID
                 LEFT JOIN T_USUARIOS A ON A.ID = S.ASIGNADO_A
+                LEFT JOIN T_EVENTOS_CONVOCATORIA EV ON EV.ID = S.EVENTO_ID
                 $joinNov
                 WHERE $where
              ) X WHERE X.RN BETWEEN :rn_desde AND :rn_hasta ORDER BY X.RN",

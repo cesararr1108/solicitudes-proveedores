@@ -99,7 +99,7 @@ class CrearSolicitud
             throw new ValidacionException('Este tipo de solicitud requiere al menos un adjunto', array('adjuntos' => 'Obligatorio'));
         }
 
-        $eventoId    = $plantilla->requiereExcel() ? $this->eventoDisponible($actor, Entrada::entero($entrada, 'evento_id')) : null;
+        $eventoId    = $this->eventoIndicado($actor, $entrada);
         $solicitud   = Solicitud::nueva($actor, $tipo['ID'], $datos['asunto'], $datos['observacion'], $eventoId);
         $repo        = $this->solicitudes;
         $detalle     = $this->detalle;
@@ -125,11 +125,22 @@ class CrearSolicitud
         return array('id' => $id);
     }
 
-    /** Evento comercial opcional: debe estar activo y ser de la organizacion del proveedor. */
-    private function eventoDisponible(Actor $actor, $eventoId)
+    /**
+     * Toda solicitud indica si esta asociada a un evento comercial.
+     * Si lo esta, el evento debe estar activo y ser de la organizacion del proveedor.
+     */
+    private function eventoIndicado(Actor $actor, array $entrada)
     {
-        if ($eventoId <= 0) {
+        $asociado = Entrada::texto($entrada, 'asociado_evento');
+        if ($asociado !== '1' && $asociado !== '0') {
+            throw new ValidacionException('Indique si la solicitud esta asociada a un evento comercial', array('asociado_evento' => 'Obligatorio'));
+        }
+        if ($asociado === '0') {
             return null;
+        }
+        $eventoId = Entrada::entero($entrada, 'evento_id');
+        if ($eventoId <= 0) {
+            throw new ValidacionException('Seleccione el evento comercial', array('evento_id' => 'Obligatorio'));
         }
         if ($this->catalogo->obtenerEventoActivo($eventoId, $actor->organizacion()) === null) {
             throw new ValidacionException('El evento comercial no esta disponible', array('evento_id' => 'No disponible'));

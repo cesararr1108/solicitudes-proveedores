@@ -149,6 +149,13 @@ html[data-org="1000"] .sp-app,
 .sp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .sp-counter { font-size: 12px; color: var(--sp-muted); text-align: right; }
 
+.sp-opciones { display: flex; gap: 8px; }
+.sp-opcion { position: relative; cursor: pointer; }
+.sp-opcion input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sp-opcion span { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; height: 36px; padding: 0 14px; border: 1px solid var(--sp-border-strong); border-radius: var(--sp-radius-sm); background: var(--sp-surface); font-weight: 600; color: var(--sp-text-2); }
+.sp-opcion input:checked + span { border-color: var(--sp-brand); background: var(--sp-brand-soft); color: var(--sp-brand-text); }
+.sp-opcion input:focus-visible + span { box-shadow: 0 0 0 3px var(--sp-brand-ring); }
+.sp-opcion input:disabled + span { opacity: .5; cursor: not-allowed; }
 .sp-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
 .sp-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .sp-switch span {

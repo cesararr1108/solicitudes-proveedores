@@ -51,7 +51,7 @@ class ObtenerCatalogos
         );
 
         if ($actor->esProveedor()) {
-            // Para asociar descuentos / bonificados a un evento comercial
+            // Toda solicitud indica si esta asociada a un evento comercial
             $datos['eventos'] = $this->catalogo->listarEventosActivos($actor->organizacion());
         }
         if ($actor->esGestor()) {

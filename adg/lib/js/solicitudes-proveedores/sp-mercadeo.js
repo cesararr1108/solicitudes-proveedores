@@ -195,7 +195,7 @@
           return '<tr class="sp-row' + (nuevo ? ' sp-row--nuevo' : '') + '" tabindex="0" data-id="' + s.ID + '">' +
             '<td><span class="sp-id">#' + s.ID + '</span></td>' +
             '<td><div class="sp-cell-main">' + SP.esc(s.PROVEEDOR || s.CODIGO_SAP_PROVEEDOR) + '</div><div class="sp-cell-sub">' + SP.esc(s.USUARIO) + '</div></td>' +
-            '<td><div>' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + '</div>' + (nuevo ? SP.textoNovedad(s, false) : '') + '</td>' +
+            '<td><div>' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + '</div>' + SP.etiquetaEvento(s) + (nuevo ? SP.textoNovedad(s, false) : '') + '</td>' +
             '<td>' + SP.badge(s.ESTADO) + '</td>' +
             '<td>' + SP.persona(s.ASIGNADO) + '</td>' +
             '<td>' + SP.antiguedad(s.MINUTOS, r.sla) + '</td>' +
@@ -249,7 +249,7 @@
           return '<tr class="sp-row" tabindex="0" data-id="' + s.ID + '">' +
             '<td><span class="sp-id">#' + s.ID + '</span></td>' +
             '<td><div class="sp-cell-main">' + SP.esc(s.PROVEEDOR || s.CODIGO_SAP_PROVEEDOR) + '</div></td>' +
-            '<td><div>' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + '</div></td>' +
+            '<td><div>' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + '</div>' + SP.etiquetaEvento(s) + '</td>' +
             '<td>' + SP.badge(s.ESTADO) + '</td>' +
             '<td>' + SP.persona(s.ASIGNADO) + '</td>' +
             '<td class="sp-nowrap">' + SP.fmt.fecha(s.FECHA_CREACION, false) + '</td>' +

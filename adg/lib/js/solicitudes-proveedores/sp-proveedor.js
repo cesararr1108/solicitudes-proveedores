@@ -112,7 +112,7 @@
           const nuevo = +s.NOVEDADES > 0;
           return '<tr class="sp-row' + (nuevo ? ' sp-row--nuevo' : '') + '" tabindex="0" data-id="' + s.ID + '">' +
             '<td><span class="sp-id">#' + s.ID + '</span></td>' +
-            '<td><div class="sp-cell-main">' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + ' · ' + SP.esc(s.USUARIO) + '</div>' +
+            '<td><div class="sp-cell-main">' + SP.esc(s.ASUNTO) + '</div><div class="sp-cell-sub">' + SP.esc(s.TIPO) + ' · ' + SP.esc(s.USUARIO) + '</div>' + SP.etiquetaEvento(s) +
             (nuevo ? SP.textoNovedad(s, true) : '') + '</td>' +
             '<td>' + SP.badge(s.ESTADO) + '</td>' +
             '<td class="sp-hide-sm">' + SP.persona(s.ASIGNADO, 'Por asignar') + '</td>' +
@@ -217,7 +217,8 @@
         '<div class="sp-field"><label for="sp-obs" class="sp-req">Observacion</label>' +
           '<textarea id="sp-obs" name="observacion" class="sp-textarea" rows="5" maxlength="8000" placeholder="Explique el caso con el mayor detalle posible: vigencia, condiciones, canales, etc."></textarea>' +
           '<div class="sp-between"><span class="sp-field__help">Minimo 10 caracteres.</span><span class="sp-counter" data-contador>0 / 8000</span></div></div>' +
-        (t.REQUIERE_EXCEL ? seccionEvento(cat) + seccionExcel(plantilla, cat) : '') +
+        seccionEvento(cat) +
+        (t.REQUIERE_EXCEL ? seccionExcel(plantilla, cat) : '') +
         '<div class="sp-field" data-campo-adjuntos><span class="sp-label ' + (adjuntoObligatorio ? 'sp-req' : '') + '">' + (t.REQUIERE_EXCEL ? 'Soportes adicionales (opcional)' : 'Adjuntos') + '</span>' +
           '<input type="hidden" name="adjuntos">' +
           '<label class="sp-drop" data-drop-adjuntos tabindex="0">' + SP.icono('upload') +
@@ -241,6 +242,12 @@
 
     $b.on('click', '[data-cambiar-tipo]', function () { pasoTipo(f); });
     $b.on('input', 'input,textarea', function () { f.sucio = true; });
+    $b.on('change', '[name=asociado_evento]', function () {
+      f.sucio = true;
+      const si = this.value === '1';
+      $b.find('[data-campo-evento]').prop('hidden', !si);
+      if (!si) { $b.find('[name=evento_id]').val(''); }
+    });
     $b.on('input', '[name=observacion]', function () { $b.find('[data-contador]').text(this.value.length + ' / 8000'); });
 
     if (t.REQUIERE_EXCEL) { eventosExcel(f, $b, plantilla); }
@@ -251,16 +258,23 @@
 
   /* ------------------------- Evento comercial ------------------------- */
 
+  /** Toda solicitud indica si esta asociada a un evento comercial; si es asi, cual. */
   function seccionEvento(cat) {
     const eventos = cat.eventos || [];
-    return '<div class="sp-field"><label for="sp-evento">Evento comercial (opcional)</label>' +
-      '<select id="sp-evento" name="evento_id" class="sp-select"' + (eventos.length ? '' : ' disabled') + '>' +
-        '<option value="">' + (eventos.length ? 'No asociar a un evento' : 'No hay eventos activos para su organizacion') + '</option>' +
+    return '<div class="sp-field"><span class="sp-label sp-req">¿Esta asociada a un evento comercial?</span>' +
+        '<div class="sp-opciones" role="radiogroup">' +
+          '<label class="sp-opcion"><input type="radio" name="asociado_evento" value="1"' + (eventos.length ? '' : ' disabled') + '><span>Si</span></label>' +
+          '<label class="sp-opcion"><input type="radio" name="asociado_evento" value="0"><span>No</span></label>' +
+        '</div>' +
+        (eventos.length ? '' : '<div class="sp-field__help">No hay eventos comerciales activos para su organizacion.</div>') +
+      '</div>' +
+      '<div class="sp-field" data-campo-evento hidden><label for="sp-evento" class="sp-req">Evento comercial</label>' +
+        '<select id="sp-evento" name="evento_id" class="sp-select"><option value="">Seleccione el evento</option>' +
         eventos.map(function (e) {
           const vigencia = e.FECHA_INICIO ? ' (' + SP.fmt.fecha(e.FECHA_INICIO, false) + (e.FECHA_FIN ? ' - ' + SP.fmt.fecha(e.FECHA_FIN, false) : '') + ')' : '';
           return '<option value="' + e.ID + '">' + SP.esc(e.NOMBRE + vigencia) + '</option>';
         }).join('') +
-      '</select><div class="sp-field__help">Si el descuento o bonificado aplica para un evento comercial, seleccionelo.</div></div>';
+      '</select></div>';
   }
 
   /* ---------------------------- Excel -------------------------------- */
@@ -363,11 +377,14 @@
     const datos = {
       asunto: $.trim($form.find('[name=asunto]').val()),
       observacion: $.trim($form.find('[name=observacion]').val()),
+      asociado_evento: $form.find('[name=asociado_evento]:checked').val() || '',
       evento_id: $form.find('[name=evento_id]').val() || ''
     };
     const errores = {};
     if (datos.asunto.length < 5) { errores.asunto = 'Escriba un asunto de al menos 5 caracteres'; }
     if (datos.observacion.length < 10) { errores.observacion = 'Describa el caso con al menos 10 caracteres'; }
+    if (datos.asociado_evento === '') { errores.asociado_evento = 'Indique si la solicitud esta asociada a un evento comercial'; }
+    if (datos.asociado_evento === '1' && !datos.evento_id) { errores.evento_id = 'Seleccione el evento comercial'; }
     if (f.tipo.REQUIERE_EXCEL && !f.excel) { errores.archivo_excel = 'Cargue el archivo Excel'; }
     if (adjuntoObligatorio && !f.cargador.archivos.length) { errores.adjuntos = 'Adjunte al menos un archivo'; }
     SP.mostrarErrores($form, errores);
@@ -403,7 +420,8 @@
           tipo_id: f.tipo.ID,
           asunto: datos.asunto,
           observacion: datos.observacion,
-          evento_id: datos.evento_id,
+          asociado_evento: datos.asociado_evento,
+          evento_id: datos.asociado_evento === '1' ? datos.evento_id : '',
           filas: f.tipo.REQUIERE_EXCEL ? JSON.stringify(f.filasLeidas) : '',
           archivo_excel: excelSubido ? JSON.stringify(excelSubido) : '',
           adjuntos: JSON.stringify(adjuntos)

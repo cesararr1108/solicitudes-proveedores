@@ -282,6 +282,11 @@
     $(this).closest('.sp-field').removeClass('sp-field--invalid').find('.sp-field__error').remove();
   });
 
+  /** Etiqueta para las listas cuando la solicitud esta asociada a un evento comercial. */
+  SP.etiquetaEvento = function (s) {
+    return s.EVENTO ? '<div style="margin-top:4px"><span class="sp-tag sp-tag--brand" title="Evento comercial">' + SP.esc(s.EVENTO) + '</span></div>' : '';
+  };
+
   /* ------------------------------------------------------------------
      Drawer lateral: el contexto (la lista) sigue visible detras
      ------------------------------------------------------------------ */
