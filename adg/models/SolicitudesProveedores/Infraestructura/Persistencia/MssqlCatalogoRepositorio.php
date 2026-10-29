@@ -109,4 +109,24 @@ class MssqlCatalogoRepositorio implements CatalogoRepositorio
     {
         return (int) $this->db->valor('SELECT PROCESO_ID FROM T_ROLES WHERE ID = :id', array('id' => (int) $rolId));
     }
+
+    public function listarEventosActivos($organizacion)
+    {
+        return $this->db->consultar(
+            "SELECT ID, NOMBRE, " . SqlComun::fecha('FECHA_INICIO') . " AS FECHA_INICIO, " . SqlComun::fecha('FECHA_FIN') . " AS FECHA_FIN
+               FROM T_EVENTOS_CONVOCATORIA
+              WHERE ESTADO = 'A' AND ORGANIZACION_VENTAS = :org
+              ORDER BY FECHA_INICIO DESC, NOMBRE",
+            array('org' => (string) $organizacion)
+        );
+    }
+
+    public function obtenerEventoActivo($id, $organizacion)
+    {
+        return $this->db->fila(
+            "SELECT ID, NOMBRE FROM T_EVENTOS_CONVOCATORIA
+              WHERE ID = :id AND ESTADO = 'A' AND ORGANIZACION_VENTAS = :org",
+            array('id' => (int) $id, 'org' => (string) $organizacion)
+        );
+    }
 }

@@ -28,4 +28,10 @@ interface CatalogoRepositorio
 
     /** PROCESO_ID asociado a un rol en T_ROLES (0 si no tiene). */
     public function procesoDeRol($rolId);
+
+    /** Eventos comerciales activos (T_EVENTOS_CONVOCATORIA.ESTADO = 'A') de la organizacion. */
+    public function listarEventosActivos($organizacion);
+
+    /** @return array|null evento activo de la organizacion (ID, NOMBRE) */
+    public function obtenerEventoActivo($id, $organizacion);
 }

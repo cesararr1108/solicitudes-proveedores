@@ -18,8 +18,8 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
     {
         return $this->db->insertar(
             'INSERT INTO T_MER_SOLICITUDES_PROVEEDORES
-                (TIPO_ID, ASUNTO, OBSERVACION, ESTADO, CODIGO_SAP_PROVEEDOR, USUARIO_ID, ORGANIZACION_VENTA, OFICINA_VENTAS)
-             VALUES (:tipo, :asunto, :obs, :estado, :sap, :usuario, :org, :ofi)',
+                (TIPO_ID, ASUNTO, OBSERVACION, ESTADO, CODIGO_SAP_PROVEEDOR, USUARIO_ID, ORGANIZACION_VENTA, OFICINA_VENTAS, EVENTO_ID)
+             VALUES (:tipo, :asunto, :obs, :estado, :sap, :usuario, :org, :ofi, :evento)',
             array(
                 'tipo'    => $s->tipoId(),
                 'asunto'  => $s->asunto(),
@@ -29,6 +29,7 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
                 'usuario' => $s->usuarioId(),
                 'org'     => $s->organizacion() === '' ? null : $s->organizacion(),
                 'ofi'     => $s->oficina() === '' ? null : $s->oficina(),
+                'evento'  => $s->eventoId(),
             )
         );
     }
@@ -55,6 +56,7 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
                     S.USUARIO_ID, U.NOMBRES + ' ' + U.APELLIDOS AS USUARIO, U.EMAIL AS USUARIO_EMAIL,
                     S.ORGANIZACION_VENTA, S.OFICINA_VENTAS, OV.DESCRIPCION AS OFICINA,
                     S.ASIGNADO_A, A.NOMBRES + ' ' + A.APELLIDOS AS ASIGNADO,
+                    S.EVENTO_ID, EV.NOMBRE AS EVENTO,
                     " . SqlComun::fecha('S.FECHA_CREACION') . " AS FECHA_CREACION,
                     " . SqlComun::fecha('S.FECHA_ASIGNACION') . " AS FECHA_ASIGNACION,
                     " . SqlComun::fecha('S.FECHA_INICIO_GESTION') . " AS FECHA_INICIO_GESTION,
@@ -64,6 +66,7 @@ class MssqlSolicitudRepositorio implements SolicitudRepositorio
              INNER JOIN T_CAL_PROCESOS P ON P.ID = T.PROCESO_ID
              INNER JOIN T_USUARIOS U ON U.ID = S.USUARIO_ID
              LEFT JOIN T_USUARIOS A ON A.ID = S.ASIGNADO_A
+             LEFT JOIN T_EVENTOS_CONVOCATORIA EV ON EV.ID = S.EVENTO_ID
              OUTER APPLY (SELECT TOP 1 O.DESCRIPCION FROM T_OFICINAS_VENTAS O
                            WHERE O.ORGANIZACION_VENTAS = S.ORGANIZACION_VENTA AND O.OFICINA_VENTAS = S.OFICINA_VENTAS) OV
              WHERE S.ID = :id",

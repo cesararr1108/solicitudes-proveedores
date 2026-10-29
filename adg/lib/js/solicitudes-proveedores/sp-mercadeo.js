@@ -11,7 +11,7 @@
   const st = { cat: null, vista: 'bandeja', $root: null, $panel: null };
 
   const bandeja = { asignacion: 'todas', estado: '', proveedor: '', tipo_id: '', texto: '', pagina: 1, novedades: 0 };
-  const REFRESCO_MS = 60000;
+  const REFRESCO_MS = 30000;
   const historial = { estado: 'FINALIZADO', desde: SP.fmt.hoy(-90), hasta: SP.fmt.hoy(), proveedor: '', tipo_id: '', asignado_a: '', texto: '', pagina: 1 };
   const dash = { desde: SP.fmt.hoy(-30), hasta: SP.fmt.hoy(), proveedor: '', tipo_id: '', asignado_a: '' };
 
@@ -23,9 +23,9 @@
       if (cat.actor.perfil === 'AUXILIAR') { bandeja.asignacion = 'mias'; }
       pintarShell();
       cambiarVista(st.vista);
-      // Refresco automatico de la bandeja (nuevas solicitudes y mensajes del proveedor)
+      // Refresco automatico cada 30 s de la bandeja (nuevas solicitudes y mensajes del proveedor)
       setInterval(function () {
-        if (st.vista === 'bandeja' && !document.hidden && !SP.drawer.abierto()) { listarBandeja(true); }
+        if (st.vista === 'bandeja' && !document.hidden) { listarBandeja(true); }
       }, REFRESCO_MS);
       const id = new URLSearchParams(window.location.search).get('id');
       if (id && /^\d+$/.test(id)) { abrirDetalle(+id); }

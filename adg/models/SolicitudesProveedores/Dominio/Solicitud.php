@@ -19,8 +19,9 @@ class Solicitud
     private $oficina;
     private $asignadoA;
     private $procesoId;
+    private $eventoId;
 
-    public static function nueva(Actor $actor, $tipoId, $asunto, $observacion)
+    public static function nueva(Actor $actor, $tipoId, $asunto, $observacion, $eventoId = null)
     {
         $s = new self();
         $s->tipoId             = (int) $tipoId;
@@ -31,6 +32,7 @@ class Solicitud
         $s->usuarioId          = $actor->id();
         $s->organizacion       = $actor->organizacion();
         $s->oficina            = $actor->oficina();
+        $s->eventoId           = $eventoId ? (int) $eventoId : null;
         return $s;
     }
 
@@ -84,4 +86,5 @@ class Solicitud
     public function oficina()            { return $this->oficina; }
     public function asignadoA()          { return $this->asignadoA; }
     public function procesoId()          { return $this->procesoId; }
+    public function eventoId()           { return $this->eventoId; }
 }

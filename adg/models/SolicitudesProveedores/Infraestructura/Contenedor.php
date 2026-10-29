@@ -113,7 +113,7 @@ class Contenedor
                 $c->obtener('repo.solicitudes'), $c->obtener('repo.tipos'), $c->obtener('repo.detalle'),
                 $c->obtener('repo.seguimiento'), $c->obtener('plantillas'), $c->obtener('solicitudes.analizar'),
                 $c->obtener('reglas_adjunto'), $c->obtener('politica'), $c->obtener('transaccion'),
-                $c->obtener('notificador'), $cfg
+                $c->obtener('notificador'), $c->obtener('repo.catalogo'), $cfg
             );
         });
         $this->registrar('solicitudes.listar', function ($c) use ($cfg) {

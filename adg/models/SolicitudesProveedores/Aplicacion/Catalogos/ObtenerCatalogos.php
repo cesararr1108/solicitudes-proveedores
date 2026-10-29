@@ -50,6 +50,10 @@ class ObtenerCatalogos
             'sla'             => $this->config['sla_horas'],
         );
 
+        if ($actor->esProveedor()) {
+            // Para asociar descuentos / bonificados a un evento comercial
+            $datos['eventos'] = $this->catalogo->listarEventosActivos($actor->organizacion());
+        }
         if ($actor->esGestor()) {
             $roles = $this->config['roles'];
             $org   = $this->config['gestor_filtra_por_organizacion'] ? $actor->organizacion() : '';

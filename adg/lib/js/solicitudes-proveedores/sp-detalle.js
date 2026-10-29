@@ -245,6 +245,7 @@
       meta('Fecha de creacion', SP.fmt.fecha(s.FECHA_CREACION)) +
       meta('Tipo / proceso', SP.esc(s.TIPO) + '<div class="sp-cell-sub">' + SP.esc(s.PROCESO || '') + '</div>') +
       meta('Responsable', SP.persona(s.ASIGNADO)) +
+      (s.EVENTO ? meta('Evento comercial', SP.esc(s.EVENTO)) : '') +
       meta(abiertos ? 'Tiempo abierta' : 'Tiempo de resolucion', SP.fmt.duracion(s.MINUTOS)) +
       '</dl>';
 

@@ -10,6 +10,7 @@ Compatible con **PHP 5.4** y `mssql_*` (SQL Server 2008+). Sin Composer ni depen
 
 1. Ejecute `adg/sql/solicitudes_proveedores.sql` en la base de datos del ADG.
    - Si ya lo había ejecutado antes de la tabla de lecturas, ejecute solo `adg/sql/solicitudes_proveedores_v2_lecturas.sql`.
+   - Si ya lo había ejecutado antes del evento comercial, ejecute `adg/sql/solicitudes_proveedores_v3_eventos.sql`. Agrega `EVENTO_ID` (opcional) para asociar descuentos y bonificados a un evento activo (`T_EVENTOS_CONVOCATORIA.ESTADO = 'A'`) de la organización del proveedor.
    - Crea las 7 tablas `T_MER_*`.
    - Crea los tipos *Descuentos*, *Bonificados* y *Otras solicitudes* con el primer proceso que contenga "MERCADEO" en `T_CAL_PROCESOS`. Si su proceso tiene otro nombre, ajuste el `SELECT` del bloque 8.
 2. Revise `adg/models/SolicitudesProveedores/config.php`:

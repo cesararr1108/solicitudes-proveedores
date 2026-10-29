@@ -87,6 +87,8 @@ class CatalogoFalso implements D\Puerto\CatalogoRepositorio {
     public function listarGestores(array $r, $o = '') { return array(); }
     public function obtenerUsuario($id) { return null; }
     public function procesoDeRol($r) { return 0; }
+    public function listarEventosActivos($o) { return array(); }
+    public function obtenerEventoActivo($id, $o) { return null; }
 }
 $cat = new CatalogoFalso();
 $reg = D\Plantilla\RegistroPlantillas::predeterminado();

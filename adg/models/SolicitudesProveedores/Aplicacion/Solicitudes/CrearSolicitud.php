@@ -6,6 +6,7 @@ use SolicitudesProveedores\Dominio\Actor;
 use SolicitudesProveedores\Dominio\Excepcion\ValidacionException;
 use SolicitudesProveedores\Dominio\Plantilla\RegistroPlantillas;
 use SolicitudesProveedores\Dominio\PoliticaAcceso;
+use SolicitudesProveedores\Dominio\Puerto\CatalogoRepositorio;
 use SolicitudesProveedores\Dominio\Puerto\DetalleRepositorio;
 use SolicitudesProveedores\Dominio\Puerto\Notificador;
 use SolicitudesProveedores\Dominio\Puerto\SeguimientoRepositorio;
@@ -29,13 +30,15 @@ class CrearSolicitud
     private $politica;
     private $transaccion;
     private $notificador;
+    private $catalogo;
     private $config;
 
     public function __construct(SolicitudRepositorio $solicitudes, TipoSolicitudRepositorio $tipos,
                                 DetalleRepositorio $detalle, SeguimientoRepositorio $seguimiento,
                                 RegistroPlantillas $plantillas, AnalizarDetalle $analizador,
                                 ReglasAdjunto $reglasAdjunto, PoliticaAcceso $politica,
-                                Transaccion $transaccion, Notificador $notificador, array $config)
+                                Transaccion $transaccion, Notificador $notificador,
+                                CatalogoRepositorio $catalogo, array $config)
     {
         $this->solicitudes   = $solicitudes;
         $this->tipos         = $tipos;
@@ -47,6 +50,7 @@ class CrearSolicitud
         $this->politica      = $politica;
         $this->transaccion   = $transaccion;
         $this->notificador   = $notificador;
+        $this->catalogo      = $catalogo;
         $this->config        = $config;
     }
 
@@ -95,7 +99,8 @@ class CrearSolicitud
             throw new ValidacionException('Este tipo de solicitud requiere al menos un adjunto', array('adjuntos' => 'Obligatorio'));
         }
 
-        $solicitud   = Solicitud::nueva($actor, $tipo['ID'], $datos['asunto'], $datos['observacion']);
+        $eventoId    = $plantilla->requiereExcel() ? $this->eventoDisponible($actor, Entrada::entero($entrada, 'evento_id')) : null;
+        $solicitud   = Solicitud::nueva($actor, $tipo['ID'], $datos['asunto'], $datos['observacion'], $eventoId);
         $repo        = $this->solicitudes;
         $detalle     = $this->detalle;
         $seguimiento = $this->seguimiento;
@@ -118,6 +123,18 @@ class CrearSolicitud
 
         $this->notificador->notificar('SOLICITUD_CREADA', array('id' => $id, 'tipo' => $tipo['NOMBRE'], 'actor' => $actor->id()));
         return array('id' => $id);
+    }
+
+    /** Evento comercial opcional: debe estar activo y ser de la organizacion del proveedor. */
+    private function eventoDisponible(Actor $actor, $eventoId)
+    {
+        if ($eventoId <= 0) {
+            return null;
+        }
+        if ($this->catalogo->obtenerEventoActivo($eventoId, $actor->organizacion()) === null) {
+            throw new ValidacionException('El evento comercial no esta disponible', array('evento_id' => 'No disponible'));
+        }
+        return $eventoId;
     }
 
     private function tipoDisponible(Actor $actor, $tipoId)
